@@ -3,7 +3,7 @@
 
 Interactive 3D tool:
 
-<a href="https://timhutton.github.io/zomes/"><img width="600px" src="https://user-images.githubusercontent.com/647092/38957506-b8d2d3da-4352-11e8-9d1b-240de1a956fd.png">
+<a href="https://timhutton.github.io/zomes/"><img width="600px" src="https://user-images.githubusercontent.com/647092/38961799-24394c62-4362-11e8-9e29-f0360f4e7997.png">
 <br>
 Click here.</a>
 
