@@ -2,6 +2,48 @@
 <html>
 <head>
 <meta charset="utf-8">
+
+<style>
+.slidecontainer {
+    width: 100%; /* Width of the outside container */
+}
+
+/* The slider itself */
+.slider {
+    -webkit-appearance: none;  /* Override default CSS styles */
+    appearance: none;
+    width: 100%; /* Full-width */
+    height: 25px; /* Specified height */
+    background: #d3d3d3; /* Grey background */
+    outline: none; /* Remove outline */
+    opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+    -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+    transition: opacity .2s;
+}
+
+/* Mouse-over effects */
+.slider:hover {
+    opacity: 1; /* Fully shown on mouse-over */
+}
+
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Override default look */
+    appearance: none;
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    background: #4CAF50; /* Green background */
+    cursor: pointer; /* Cursor on hover */
+}
+
+.slider::-moz-range-thumb {
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    background: #4CAF50; /* Green background */
+    cursor: pointer; /* Cursor on hover */
+}
+</style>
+
 <script>
 
 function p3( x, y, z ) { return { x:x, y:y, z:z }; }
@@ -23,30 +65,12 @@ function mid( a, b ) { return mul( add( a, b ), 0.5 ); }
 function angle( p1, p2, p3 ) { var a = dist(p2,p3); var b = dist(p1,p2); var c = dist(p1,p3); return Math.acos( ( c*c - a*a - b*b ) / ( -2*a*b ) ); }
 function rot2d( v, theta ) { var s = Math.sin(theta); var c = Math.cos(theta); return p2( v.x*c - v.y*s, v.x*s + v.y*c ); }
 
-var M;
-var angles = [];
-
-var theta;
-var view_height;
-var camera;
-var isSpinning = true;
-var canvas;
-var ctx;
-
-var verts = [];
-var edges = []; // pairs of vert indices
-var faces = []; // list of vert indices
-var verts2d = [];
-
-var animationRequestID = undefined;
-
-var target_edge_length = 1.0;
-
 function clear() {
     verts = [];
     verts2d = [];
     edges = [];
     faces = [];
+    angles = [];
 }
 
 function getMousePos(canvas, evt) {
@@ -110,15 +134,13 @@ function make_face4(i,j,k,m) {
     make_edge(m,i);
 }
 
-function init() {
+function make_zome() {
 
-    // construct the zome
-    var N = 12; // verts around the centerline
-    var R = 10; // radius of center circle
-    var H = 0.3 * R; // height of first ring
-    var P = 0.035 * R; // shift outwards of first ring
-    M = 8; // number of rings
-    var Z = -R; // vertical position of base
+    clear();
+
+    var H = height * R; // height of first ring
+    var P = bulge * R; // shift outwards of first ring
+    var Z = -10; // vertical position of base
     // add the base ring of vertices
     for(var i=0;i<N;i++) {
         var a = i*2*Math.PI / N;
@@ -149,6 +171,9 @@ function init() {
             }
         }
     }
+}
+
+function init() {
 
     canvas = document.getElementById('canvas');
     ctx = canvas.getContext('2d');
@@ -160,9 +185,46 @@ function init() {
                y:p3(0,1,0), 
                z:p3(0,0,1), 
                f:canvas.height,
-               pp:p2(canvas.width/2,canvas.height/2) 
+               pp:p2(canvas.width/2-100,canvas.height/2) 
              };
     repositionCamera();
+             
+    var width_slider = document.getElementById("width_slider");
+    R = parseFloat(width_slider.value);
+    width_slider.oninput = function() {
+        R = parseFloat(this.value);
+        make_zome();
+    }
+
+    var height_slider = document.getElementById("height_slider");
+    height = parseFloat(height_slider.value);
+    height_slider.oninput = function() {
+        height = parseFloat(this.value);
+        make_zome();
+    }
+
+    var bulge_slider = document.getElementById("bulge_slider");
+    bulge = parseFloat(bulge_slider.value);
+    bulge_slider.oninput = function() {
+        bulge = parseFloat(this.value);
+        make_zome();
+    }
+
+    var rings_slider = document.getElementById("rings_slider");
+    M = parseFloat(rings_slider.value);
+    rings_slider.oninput = function() {
+        M = parseFloat(this.value);
+        make_zome();
+    }
+    
+    var triangles_slider = document.getElementById("triangles_slider");
+    N = parseFloat(triangles_slider.value);
+    triangles_slider.oninput = function() {
+        N = parseFloat(this.value);
+        make_zome();
+    }
+    
+    make_zome();
     
     redraw();
 
@@ -174,6 +236,7 @@ function init() {
     canvas.addEventListener( 'mouseup',  onMouseUp, false );
     canvas.addEventListener( 'mouseout',  onMouseUp, false );
     
+    isSpinning = true;
     animate();
 }
 
@@ -242,8 +305,8 @@ function drawNet() {
     ctx.beginPath();
     
     // first triangle:
-    var a = p2(700,580);
-    var b = p2(810,580);
+    var a = p2(500,580);
+    var b = p2(a.x+R*10,580);
     var angle = angles[0];
     var h = 0.5*dist(a,b) / Math.tan(angles[0]/2);
     var c = add(mid(a,b),p2(0,-h));
@@ -280,7 +343,7 @@ function drawRect( x, y, w, h ) {
 function animate() {
     if( isSpinning ) {
         // rotate round
-        theta += 0.005;
+        theta += 0.004;
         repositionCamera();
     }
     redraw();
@@ -288,6 +351,7 @@ function animate() {
 }
 
 window.onload = init;
+
 </script>
 
 <noscript>
@@ -302,9 +366,25 @@ instructions how to enable JavaScript in your web browser</a>.
 
 <table border="0">
 <tr>
-<td><canvas id="canvas" width="1000" height="600">(Canvas drawing not supported by your browser.)</canvas></td>
+<td><canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas></td>
+<td width="300px" valign="center">
+Width:<br>
+<div class="slidecontainer"><input type="range" min="0.3" max="15" value="10" step="0.001" class="slider" id="width_slider"></div>
+Height:<br>
+<div class="slidecontainer"><input type="range" min="0.05" max="0.7" value="0.3" step="0.0001" class="slider" id="height_slider"></div>
+Bulge:<br>
+<div class="slidecontainer"><input type="range" min="-1" max="1" value="0.035" step="0.0001" class="slider" id="bulge_slider"></div>
+Number of rings:<br>
+<div class="slidecontainer"><input type="range" min="2" max="30" value="8" step="1" class="slider" id="rings_slider"></div>
+Number of triangles:<br>
+<div class="slidecontainer"><input type="range" min="3" max="30" value="12" step="1" class="slider" id="triangles_slider"></div>
+</td>
 </tr>
 </table>
+
+<p>
+Source code: <a href="https://github.com/timhutton/zomes">https://github.com/timhutton/zomes</a>
+</p>
 
 </body>
 
