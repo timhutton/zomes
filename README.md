@@ -1,11 +1,14 @@
-# zomes
-[Zomes](https://simplydifferently.org/Zome) are zonohedron domes, made from rhombi.
+# [Zomes](https://simplydifferently.org/Zome) are zonohedron domes, made from rhombi. #
 
-Interactive 3D tool:
-
-<a href="https://timhutton.github.io/zomes/"><img width="600px" src="https://user-images.githubusercontent.com/647092/38961799-24394c62-4362-11e8-9e29-f0360f4e7997.png">
+<a href="https://timhutton.github.io/zomes/">Interactive 3D tool:
+<br>
+<img width="600px" src="https://user-images.githubusercontent.com/647092/38961799-24394c62-4362-11e8-9e29-f0360f4e7997.png">
 <br>
 Click here.</a>
+
+The beauty of zomes is that their shape comes completely from the properties of rhombi - only the bottom row of triangles is chosen by the user.
+
+## Papercraft model ##
 
 If you print out copies of the curved strip, and cut them out, you can assemble your own zome!
 
