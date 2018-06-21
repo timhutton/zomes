@@ -156,6 +156,7 @@ function make_zome() {
         var a = i*2*Math.PI / N;
         var p = p3( R * Math.sin(a), R * Math.cos(a), Z+H );
         p = add( p, p3(Math.random()*S-S/2,Math.random()*S-S/2,Math.random()*S-S/2) ); // add noise around that 3D point
+        p = add( verts[0], mul( sub(p,verts[0]), R / dist(p,verts[0]) ) ); // set the edge length
         add_vert( p );
     }
 
