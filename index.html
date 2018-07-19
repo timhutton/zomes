@@ -57,9 +57,10 @@ function sub( a, b ) { return p3( a.x - b.x, a.y - b.y, a.z - b.z ); }
 function mul( a, f ) { return p3( a.x * f, a.y * f, a.z * f ); }
 function dot( a, b ) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 function len2( a ) { return dot(a,a); }
-function dist( a, b ) { return Math.sqrt( len2( sub( a, b ) ) ); }
+function len( a ) { return Math.sqrt( len2( a ) ); }
+function dist( a, b ) { return len( sub( a, b ) ); }
 function assign( a, b ) { a.x = b.x; a.y = b.y; a.z = b.z; }
-function normalize( a ) { return mul( a, 1 / Math.sqrt( len2( a ) ) ); }
+function normalize( a ) { return mul( a, 1 / len( a ) ); }
 function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, a.x * b.y - a.y * b.x ); }
 function mid( a, b ) { return mul( add( a, b ), 0.5 ); }
 function angle( p1, p2, p3 ) { var a = dist(p2,p3); var b = dist(p1,p2); var c = dist(p1,p3); return Math.acos( ( c*c - a*a - b*b ) / ( -2*a*b ) ); }
@@ -153,6 +154,9 @@ function make_zome() {
         make_face3( i, (i+1)%N, N+i );
     }
     angles.push( angle( verts[0], verts[N], verts[1] ) );
+    console.clear();
+    scale = 53 / 8.704871472742477;
+    console.log('Base triangle: height=',dist(mid(verts[0], verts[1]),verts[N])*scale,'width=',dist( verts[0], verts[1] )*scale,'side=',dist(verts[0],verts[N])*scale);
     // add the remaining rings
     for(var r=2;r<M;r++) {
         for(var i=0;i<N;i++) {
@@ -168,6 +172,11 @@ function make_zome() {
             make_face4( ia, ib, ic, id );
             if( i == 0 ) {
                 angles.push( angle(a,b,c) );
+                console.log('Rombus/kite: height=',dist( b, d )*scale,'width=',dist( a, c )*scale,'side=',dist(a,b)*scale);
+                if( r == M-1 ) {
+                    console.log('Total height=',(d.z - verts[0].z)*scale);
+                    console.log('Ratio of height to longest rhombus:',(d.z - verts[0].z)*scale / dist(b,d));
+                }
             }
         }
     }
