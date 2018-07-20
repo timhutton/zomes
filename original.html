@@ -64,7 +64,6 @@ function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, 
 function mid( a, b ) { return mul( add( a, b ), 0.5 ); }
 function angle( p1, p2, p3 ) { var a = dist(p2,p3); var b = dist(p1,p2); var c = dist(p1,p3); return Math.acos( ( c*c - a*a - b*b ) / ( -2*a*b ) ); }
 function rot2d( v, theta ) { var s = Math.sin(theta); var c = Math.cos(theta); return p2( v.x*c - v.y*s, v.x*s + v.y*c ); }
-function deg2rad(deg) { return deg * Math.PI / 180; }
 
 function clear() {
     verts = [];
@@ -114,7 +113,6 @@ function pointInRect( p, rect ) {
 
 function add_vert( p ) {
     verts.push( p );
-    return verts.length-1;
 }
 
 function make_edge(i,j) {
@@ -136,94 +134,40 @@ function make_face4(i,j,k,m) {
     make_edge(m,i);
 }
 
-function make_face5(i,j,k,m,n) {
-    faces.push( [i,j,k,m,n] );
-    make_edge(i,j);
-    make_edge(j,k);
-    make_edge(k,m);
-    make_edge(m,n);
-    make_edge(n,i);
-}
-
 function make_zome() {
 
     clear();
 
-    // user-controlled parameters
-    var N = 16; // number of rhombi around
-    var theta = 45; // angle between axis and top edges, in degrees
-    var D = 0.9; // ground level, expressed as proportion where 0.5 is halfway, giving vertical walls at base
-    var H = 1.4; // height from ground to tip, in whatever units you want. only affects the numbers, not the rendering
-    var K = 1; // kite ratio
-    // TODO: if K is vertical coord of 4th point, add new parameter to control its horizontal position
-    
-    var M = N; // number of rows
-    var cos_theta = Math.cos(deg2rad(theta));
-    var sin_theta = Math.sin(deg2rad(theta));
-    var tip_Z = 15;
-    var total_polar_height = 30;
-    var kite_ratio_sum = (K==1) ? M : (1-Math.pow(K,M+1)) / (1-K);
-    var top_edge_length =  total_polar_height / ( kite_ratio_sum * cos_theta );
-    ground_level = tip_Z - D * total_polar_height;
-    
-    // add the top vert
-    add_vert( p3( 0, 0, tip_Z ) );
-    
-    // add the top ring of vertices
-    var ring1_radius = top_edge_length * sin_theta; 
-    var ring1_height = top_edge_length * cos_theta;
-    for(var i=0; i<N; i++) {
+    var H = height * R; // height of first ring
+    var P = bulge * R; // shift outwards of first ring
+    var Z = -10; // vertical position of base
+    // add the base ring of vertices
+    for(var i=0;i<N;i++) {
         var a = i*2*Math.PI / N;
-        var p = p3( ring1_radius * Math.sin(a), ring1_radius * Math.cos(a), tip_Z-ring1_height );
-        add_vert( p ); // we assume that this is above ground level
+        add_vert( p3( R * Math.sin(a), R * Math.cos(a), Z ) );
     }
-
-    // add the faces
-    var hit_ground = false;
-    var triangles = [];
-    for(var r=1;r<M && !hit_ground;r++) {
+    // add the next ring of vertices
+    for(var i=0;i<N;i++) {
+        var b = (i+0.5)*2*Math.PI / N;
+        add_vert( p3( (R+P) * Math.sin(b), (R+P) * Math.cos(b), Z+H ) );
+        make_face3( i, (i+1)%N, N+i );
+    }
+    angles.push( angle( verts[0], verts[N], verts[1] ) );
+    // add the remaining rings
+    for(var r=2;r<M;r++) {
         for(var i=0;i<N;i++) {
-            var ia = (r-1)*N+1+i;
-            var ib = Math.max(0,(r-2)*N+1+(i+1)%N);
-            var ic = (r-1)*N+1+(i+1)%N;
+            var ia = (r-1)*N+i;
+            var ib = (r-2)*N+(i+1)%N;
+            var ic = (r-1)*N+(i+1)%N;
+            var id = r*N+i;
             var a = verts[ ia ];
             var b = verts[ ib ];
             var c = verts[ ic ];
             var d = add(b,mul(sub(mid(a,c),b),1+K)); // make a kite (rhombus if K=1)
-            if( d.z >= ground_level ) {
-                var id = add_vert( d );
-                make_face4( ia, ib, ic, id );
-                if(d.z === ground_level) {
-                    // deal with case where this ring is exactly on the ground
-                    hit_ground = true;
-                    triangles.push(id);
-                    triangles.push(id);
-                    triangles.push(ic);
-                }
-            }
-            else {
-                var u = (ground_level - a.z ) / (d.z - a.z);
-                var e = add(a,mul(sub(d,a),u));
-                var f = add(c,mul(sub(d,c),u));
-                var ie = add_vert( e );
-                var i_f = add_vert( f );
-                make_face5( ia, ib, ic, i_f, ie );
-                hit_ground = true;
-                triangles.push(ie);
-                triangles.push(i_f);
-                triangles.push(ic);
-            }
-        }
-    }
-    
-    // add the bottom row of triangles as needed
-    if(triangles.length>0) {
-        for(var i=0;i<triangles.length;i+=3) {
-            var ia = triangles[(i+1)%triangles.length];
-            var ib = triangles[(i+2)%triangles.length];
-            var ic = triangles[(i+3)%triangles.length];
-            if( ia < verts.length && ib < verts.length && ic < verts.length ) {
-                make_face3( ia, ib, ic );
+            add_vert( d );
+            make_face4( ia, ib, ic, id );
+            if( i == 0 ) {
+                angles.push( angle(a,b,c) );
             }
         }
     }
@@ -353,16 +297,6 @@ function drawMesh() {
         verts2d[ iVert ] = camera_projection( verts[ iVert ], camera );
     }
 
-    // also project the verts onto the ground
-    var sun = p3( -50, 50, 50 );
-    var shadow_verts = [];
-    for( var iVert = 0; iVert < verts.length; ++iVert ) {
-        var vert = verts[iVert];
-        var u = (ground_level - sun.z) / (vert.z - sun.z);
-        var p = add( sun, mul( sub( vert, sun ), u ) );
-        shadow_verts.push( p );
-    }
-
     ctx.strokeStyle = "rgb(200,200,200)";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
@@ -370,51 +304,31 @@ function drawMesh() {
     // draw the faces
     ctx.fillStyle = "rgba(200,210,255,0.2)";
     for( var iFace = 0; iFace < faces.length; ++iFace ) {
-        var iVert = faces[iFace][0];
-        if( iVert < verts2d.length ) {
-            var a = verts2d[ iVert ];
-            ctx.beginPath();
-            ctx.moveTo( a.x, a.y );
-            for( var i = 1; i < faces[iFace].length; ++i ) {
-                var iVert = faces[iFace][i];
-                if( iVert < verts2d.length ) {
-                    a = verts2d[ iVert ];
-                    ctx.lineTo( a.x, a.y );
-                }
-                else {
-                    console.log('Invalid vert index:',iVert,'in face',iFace);
-                }
-            }
-            ctx.fill();
+        var a = verts2d[ faces[iFace][0] ];
+        ctx.beginPath();
+        ctx.moveTo( a.x, a.y );
+        for( var i = 1; i < faces[iFace].length; ++i ) {
+            a = verts2d[ faces[iFace][i] ];
+            ctx.lineTo( a.x, a.y );
         }
+        ctx.fill();
     }
     
     // draw the edges
     ctx.strokeStyle = "rgb(200,200,200)";
     ctx.beginPath();
     for( var i = 0; i < edges.length; ++i ) {
-        var iVertA = edges[i][0];
-        var iVertB = edges[i][1];
-        if( iVertA < verts2d.length && iVertB < verts2d.length ) {
-            var a = verts2d[ iVertA ];
-            var b = verts2d[ iVertB ];
-            ctx.moveTo( a.x, a.y );
-            ctx.lineTo( b.x, b.y );
-        }
-        if( iVertA < shadow_verts.length && iVertB < shadow_verts.length ) {
-            var a = shadow_verts[ iVertA ];
-            var b = shadow_verts[ iVertB ];
-            ctx.moveTo( a.x, a.y );
-            ctx.lineTo( b.x, b.y );
-        }
+        var a = verts2d[ edges[i][0] ];
+        var b = verts2d[ edges[i][1] ];
+        ctx.moveTo( a.x, a.y );
+        ctx.lineTo( b.x, b.y );
     }
     ctx.stroke();
 
     // draw the verts
     ctx.fillStyle = "rgb(0,0,0)";
-    for( var i = 0; i < verts2d.length; ++i ) {
+    for( var i = 0; i < verts2d.length; ++i )
         point( verts2d[i], "" );
-    }
 }
 
 function drawNet() {
