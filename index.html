@@ -76,25 +76,21 @@ function clear() {
     angles = [];
 }
 
-function getMousePos(canvas, evt) {
-    var rect = canvas.getBoundingClientRect();
+function getMousePos( evt ) {
+    var rect = evt.target.getBoundingClientRect();
     return p2( evt.clientX - rect.left, evt.clientY - rect.top );
 }
 
 function onMouseMove( evt ) {
-    var pos = getMousePos( canvas, evt );
+    var pos = getMousePos( evt );
+    var canvas = evt.target;
     view_height = 1.3 * ( canvas.height / 2.0 - pos.y ) / canvas.height;
     repositionCamera();
 }
 
 function onMouseDown( evt ) {
-    var pos = getMousePos( canvas, evt );
+    var pos = getMousePos( evt );
     isSpinning = !isSpinning;
-    if( animationRequestID && isSpinning ) animate();
-}
-
-function onMouseUp( evt ) {
-    redraw();
 }
 
 function repositionCamera() {
@@ -238,13 +234,11 @@ function make_zome() {
     var base_diameter = dist( verts[verts.length-1], p3(0,0,ground_level) ) / world_scale;
     document.getElementById("base_diameter_label").innerHTML = "Base diameter: "+base_diameter.toFixed(0)+" mm";
     document.getElementById("widest_diameter_label").innerHTML = "Widest diameter: "+widest_diameter.toFixed(0)+" mm";
-
 }
 
 function init() {
 
-    canvas = document.getElementById('canvas');
-    ctx = canvas.getContext('2d');
+    var canvas = document.getElementById('canvas');
 
     camera_theta = Math.PI / 2;
     view_height = 0.5;
@@ -253,7 +247,7 @@ function init() {
                y:p3(0,1,0),
                z:p3(0,0,1),
                f:canvas.height,
-               pp:p2(canvas.width/2-100,canvas.height/2)
+               pp:p2(canvas.width/2,canvas.height/2)
              };
     repositionCamera();
 
@@ -325,15 +319,10 @@ function init() {
 
     make_zome();
 
-    redraw();
-
     canvas.addEventListener( 'mousemove', onMouseMove, false );
     canvas.addEventListener( 'touchmove', onMouseMove, false );
     canvas.addEventListener( 'touchstart', onMouseDown, false );
     canvas.addEventListener( 'mousedown',  onMouseDown, false );
-    canvas.addEventListener( 'touchend', onMouseUp, false );
-    canvas.addEventListener( 'mouseup',  onMouseUp, false );
-    canvas.addEventListener( 'mouseout',  onMouseUp, false );
 
     isSpinning = true;
     animate();
@@ -347,18 +336,21 @@ function camera_projection( p, camera ) {
                cp.z );
 }
 
-function redraw() {
-    drawMesh();
-    //drawNet();
-}
-
-function point( p ) {
+function point( ctx, p ) {
     ctx.beginPath();
     ctx.arc( p.x, p.y, 2, 0, 2.0 * Math.PI );
     ctx.fill();
 }
 
+function redraw() {
+    drawMesh();
+    //drawNet();
+}
+
 function drawMesh() {
+
+    var canvas = document.getElementById('canvas');
+    var ctx = canvas.getContext('2d');
 
     // project the mesh onto the screen
     for( var iVert = 0; iVert < verts.length; ++iVert ) {
@@ -422,6 +414,7 @@ function drawMesh() {
     for( var i = 0; i < edges.length; ++i ) {
         var iVertA = edges[i][0];
         var iVertB = edges[i][1];
+        var iVertB = edges[i][1];
         if( iVertA < verts2d.length && iVertB < verts2d.length ) {
             var a = verts2d[ iVertA ];
             var b = verts2d[ iVertB ];
@@ -434,11 +427,15 @@ function drawMesh() {
     // draw the verts
     ctx.fillStyle = "rgb(0,0,0)";
     for( var i = 0; i < verts2d.length; ++i ) {
-        point( verts2d[i], "" );
+        point( ctx, verts2d[i], "" );
     }
 }
 
 function drawNet() {
+
+    var canvas = document.getElementById('canvas2');
+    var ctx = canvas.getContext('2d');
+
     ctx.strokeStyle = "rgb(0,0,0)";
     ctx.beginPath();
 
@@ -471,13 +468,6 @@ function drawNet() {
     ctx.stroke();
 }
 
-function drawRect( x, y, w, h ) {
-    ctx.beginPath();
-    ctx.rect( x, y, w, h );
-    ctx.fill();
-    ctx.stroke();
-}
-
 function animate() {
     if( isSpinning ) {
         // rotate round
@@ -485,7 +475,7 @@ function animate() {
         repositionCamera();
     }
     redraw();
-    animationRequestID = requestAnimationFrame( animate );
+    requestAnimationFrame( animate );
 }
 
 window.onload = init;
@@ -503,25 +493,29 @@ instructions how to enable JavaScript in your web browser</a>.
 <body>
 
 <table border="0">
-<tr>
-<td><canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas></td>
-<td width="300px" valign="center">
-<p id="scale_label">Render scale:</p>
-<div class="slidecontainer"><input type="range" min="0.5" max="200" value="10" step="0.1" class="slider" id="scale_slider"></div>
-<p id="height_label">Height:</p>
-<div class="slidecontainer"><input type="range" min="100" max="10000" value="2000" step="10" class="slider" id="height_slider"></div>
-<p id="N_label">N:</p>
-<div class="slidecontainer"><input type="range" min="3" max="25" value="14" step="1" class="slider" id="N_slider"></div>
-<p id="theta_label">theta:</p>
-<div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="1" class="slider" id="theta_slider"></div>
-<p id="D_label">Cut proportion:</p>
-<div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.6" step="0.01" class="slider" id="D_slider"></div>
-<p id="kite_label">Kite ratio:</p>
-<div class="slidecontainer"><input type="range" min="0.8" max="1.2" value="1" step="0.001" class="slider" id="kite_slider"></div>
-<p id="base_diameter_label">Base diameter:</p>
-<p id="widest_diameter_label">Widest diameter:</p>
-</td>
-</tr>
+  <tr>
+    <td>
+      <canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas>
+      <br>
+      <canvas id="canvas2" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas>
+    </td>
+    <td width="300px" valign="top">
+      <p id="scale_label">Render scale:</p>
+      <div class="slidecontainer"><input type="range" min="0.5" max="200" value="10" step="0.1" class="slider" id="scale_slider"></div>
+      <p id="height_label">Height:</p>
+      <div class="slidecontainer"><input type="range" min="100" max="10000" value="2000" step="10" class="slider" id="height_slider"></div>
+      <p id="N_label">N:</p>
+      <div class="slidecontainer"><input type="range" min="3" max="25" value="14" step="1" class="slider" id="N_slider"></div>
+      <p id="theta_label">theta:</p>
+      <div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="1" class="slider" id="theta_slider"></div>
+      <p id="D_label">Cut proportion:</p>
+      <div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.6" step="0.01" class="slider" id="D_slider"></div>
+      <p id="kite_label">Kite ratio:</p>
+      <div class="slidecontainer"><input type="range" min="0.8" max="1.2" value="1" step="0.001" class="slider" id="kite_slider"></div>
+      <p id="base_diameter_label">Base diameter:</p>
+      <p id="widest_diameter_label">Widest diameter:</p>
+    </td>
+  </tr>
 </table>
 
 <p>
