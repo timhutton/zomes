@@ -56,10 +56,11 @@ function add( a, b ) { return p3( a.x + b.x, a.y + b.y, a.z + b.z ); }
 function sub( a, b ) { return p3( a.x - b.x, a.y - b.y, a.z - b.z ); }
 function mul( a, f ) { return p3( a.x * f, a.y * f, a.z * f ); }
 function dot( a, b ) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-function len2( a ) { return dot(a,a); }
-function dist( a, b ) { return Math.sqrt( len2( sub( a, b ) ) ); }
+function len2( a ) { return dot( a, a ); }
+function len( a ) { return Math.sqrt( len2( a ) ); }
+function dist( a, b ) { return len( sub( a, b ) ); }
 function assign( a, b ) { a.x = b.x; a.y = b.y; a.z = b.z; }
-function normalize( a ) { return mul( a, 1 / Math.sqrt( len2( a ) ) ); }
+function normalize( a ) { return mul( a, 1 / len( a ) ); }
 function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, a.x * b.y - a.y * b.x ); }
 function mid( a, b ) { return mul( add( a, b ), 0.5 ); }
 function angle( p1, p2, p3 ) { var a = dist(p2,p3); var b = dist(p1,p2); var c = dist(p1,p3); return Math.acos( ( c*c - a*a - b*b ) / ( -2*a*b ) ); }
@@ -69,6 +70,7 @@ function deg2rad(deg) { return deg * Math.PI / 180; }
 function clear() {
     verts = [];
     verts2d = [];
+    shadow_verts2d = [];
     edges = [];
     faces = [];
     angles = [];
@@ -151,11 +153,13 @@ function make_zome() {
 
     // TODO: if K is vertical coord of 4th point, add new parameter to control its horizontal position
 
-    var M = N; // number of rows
+    var world_scale = scale * 0.001;
+
+    var M = N-1; // number of rows of faces
     var cos_theta = Math.cos(deg2rad(theta));
     var sin_theta = Math.sin(deg2rad(theta));
-    var total_polar_height = H*10;
-    var zome_height = total_polar_height * D;
+    var zome_height = H * world_scale;
+    var total_polar_height = zome_height / D;
     var tip_Z = zome_height / 2;
     var kite_ratio_sum = (K==1) ? (M+1) : (1-Math.pow(K,M+1)) / (1-K);
     var top_edge_length =  total_polar_height / ( kite_ratio_sum * cos_theta );
@@ -176,7 +180,7 @@ function make_zome() {
     // add the faces
     var hit_ground = false;
     var triangles = [];
-    for(var r=1;r<M && !hit_ground;r++) {
+    for(var r=1;r<=M && !hit_ground;r++) {
         for(var i=0;i<N;i++) {
             var ia = (r-1)*N+1+i;
             var ib = Math.max(0,(r-2)*N+1+(i+1)%N);
@@ -222,6 +226,19 @@ function make_zome() {
             }
         }
     }
+
+    var widest_diameter = 0;
+    for(var iVert = 0; iVert < verts.length; iVert++) {
+        var v = verts[ iVert ];
+        var diameter = dist( v, p3( 0, 0, v.z ) ) / world_scale;
+        if( diameter > widest_diameter ) {
+            widest_diameter = diameter;
+        }
+    }
+    var base_diameter = dist( verts[verts.length-1], p3(0,0,ground_level) ) / world_scale;
+    document.getElementById("base_diameter_label").innerHTML = "Base diameter: "+base_diameter.toFixed(0)+" mm";
+    document.getElementById("widest_diameter_label").innerHTML = "Widest diameter: "+widest_diameter.toFixed(0)+" mm";
+
 }
 
 function init() {
@@ -240,10 +257,21 @@ function init() {
              };
     repositionCamera();
 
+    var scale_slider = document.getElementById("scale_slider");
+    scale_slider.updatefromvalue = function() {
+        scale = parseFloat(this.value);
+        document.getElementById("scale_label").innerHTML = "Render scale: "+scale;
+    }
+    scale_slider.oninput = function() {
+        this.updatefromvalue();
+        make_zome();
+    }
+    scale_slider.updatefromvalue();
+
     var H_slider = document.getElementById("height_slider");
     H_slider.updatefromvalue = function() {
         H = parseFloat(this.value);
-        document.getElementById("height_label").innerHTML = "Height: "+H;
+        document.getElementById("height_label").innerHTML = "Height: "+H+" mm";
     }
     H_slider.oninput = function() {
         this.updatefromvalue();
@@ -276,7 +304,7 @@ function init() {
     var D_slider = document.getElementById("D_slider");
     D_slider.updatefromvalue = function() {
         D = parseFloat(this.value);
-        document.getElementById("D_label").innerHTML = "Ground level: "+D;
+        document.getElementById("D_label").innerHTML = "Cut proportion: "+D;
     }
     D_slider.oninput = function() {
         this.updatefromvalue();
@@ -344,7 +372,7 @@ function drawMesh() {
         var vert = verts[iVert];
         var u = (ground_level - sun.z) / (vert.z - sun.z);
         var p = add( sun, mul( sub( vert, sun ), u ) );
-        shadow_verts.push( camera_projection( p, camera ) );
+        shadow_verts2d[ iVert ] = camera_projection( p, camera );
     }
 
     ctx.strokeStyle = "rgb(200,200,200)";
@@ -373,20 +401,22 @@ function drawMesh() {
         }
     }
 
-    // draw the edges
+    // draw the shadow edges
     ctx.strokeStyle = "rgb(240,240,240)";
     ctx.beginPath();
     for( var i = 0; i < edges.length; ++i ) {
         var iVertA = edges[i][0];
         var iVertB = edges[i][1];
-        if( iVertA < shadow_verts.length && iVertB < shadow_verts.length ) {
-            var a = shadow_verts[ iVertA ];
-            var b = shadow_verts[ iVertB ];
+        if( iVertA < shadow_verts2d.length && iVertB < shadow_verts2d.length ) {
+            var a = shadow_verts2d[ iVertA ];
+            var b = shadow_verts2d[ iVertB ];
             ctx.moveTo( a.x, a.y );
             ctx.lineTo( b.x, b.y );
         }
     }
     ctx.stroke();
+
+    // draw the edges
     ctx.strokeStyle = "rgb(200,200,200)";
     ctx.beginPath();
     for( var i = 0; i < edges.length; ++i ) {
@@ -476,16 +506,20 @@ instructions how to enable JavaScript in your web browser</a>.
 <tr>
 <td><canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas></td>
 <td width="300px" valign="center">
+<p id="scale_label">Render scale:</p>
+<div class="slidecontainer"><input type="range" min="0.5" max="200" value="10" step="0.1" class="slider" id="scale_slider"></div>
 <p id="height_label">Height:</p>
-<div class="slidecontainer"><input type="range" min="0.5" max="4" value="3" step="0.1" class="slider" id="height_slider"></div>
+<div class="slidecontainer"><input type="range" min="100" max="10000" value="2000" step="10" class="slider" id="height_slider"></div>
 <p id="N_label">N:</p>
-<div class="slidecontainer"><input type="range" min="3" max="35" value="14" step="1" class="slider" id="N_slider"></div>
+<div class="slidecontainer"><input type="range" min="3" max="25" value="14" step="1" class="slider" id="N_slider"></div>
 <p id="theta_label">theta:</p>
 <div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="1" class="slider" id="theta_slider"></div>
-<p id="D_label">Ground level:</p>
-<div class="slidecontainer"><input type="range" min="0" max="1" value="0.6" step="0.01" class="slider" id="D_slider"></div>
+<p id="D_label">Cut proportion:</p>
+<div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.6" step="0.01" class="slider" id="D_slider"></div>
 <p id="kite_label">Kite ratio:</p>
 <div class="slidecontainer"><input type="range" min="0.8" max="1.2" value="1" step="0.001" class="slider" id="kite_slider"></div>
+<p id="base_diameter_label">Base diameter:</p>
+<p id="widest_diameter_label">Widest diameter:</p>
 </td>
 </tr>
 </table>
