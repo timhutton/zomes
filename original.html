@@ -56,21 +56,18 @@ function add( a, b ) { return p3( a.x + b.x, a.y + b.y, a.z + b.z ); }
 function sub( a, b ) { return p3( a.x - b.x, a.y - b.y, a.z - b.z ); }
 function mul( a, f ) { return p3( a.x * f, a.y * f, a.z * f ); }
 function dot( a, b ) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-function len2( a ) { return dot( a, a ); }
-function len( a ) { return Math.sqrt( len2( a ) ); }
-function dist( a, b ) { return len( sub( a, b ) ); }
+function len2( a ) { return dot(a,a); }
+function dist( a, b ) { return Math.sqrt( len2( sub( a, b ) ) ); }
 function assign( a, b ) { a.x = b.x; a.y = b.y; a.z = b.z; }
-function normalize( a ) { return mul( a, 1 / len( a ) ); }
+function normalize( a ) { return mul( a, 1 / Math.sqrt( len2( a ) ) ); }
 function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, a.x * b.y - a.y * b.x ); }
 function mid( a, b ) { return mul( add( a, b ), 0.5 ); }
 function angle( p1, p2, p3 ) { var a = dist(p2,p3); var b = dist(p1,p2); var c = dist(p1,p3); return Math.acos( ( c*c - a*a - b*b ) / ( -2*a*b ) ); }
 function rot2d( v, theta ) { var s = Math.sin(theta); var c = Math.cos(theta); return p2( v.x*c - v.y*s, v.x*s + v.y*c ); }
-function deg2rad(deg) { return deg * Math.PI / 180; }
 
 function clear() {
     verts = [];
     verts2d = [];
-    shadow_verts2d = [];
     edges = [];
     faces = [];
     angles = [];
@@ -102,7 +99,7 @@ function repositionCamera() {
     var d = 40;
     var vd = d * view_height;
     var hd = Math.sqrt( d*d - vd*vd );
-    camera.p = p3( hd*Math.cos(camera_theta), hd*Math.sin(camera_theta), vd  );
+    camera.p = p3( hd*Math.cos(theta), hd*Math.sin(theta), vd  );
     camera.z = normalize( sub( look_at, camera.p ) );
     var up = p3(0,0,1);
     camera.x = normalize( cross( camera.z, up ) );
@@ -116,7 +113,6 @@ function pointInRect( p, rect ) {
 
 function add_vert( p ) {
     verts.push( p );
-    return verts.length-1;
 }
 
 function make_edge(i,j) {
@@ -138,107 +134,43 @@ function make_face4(i,j,k,m) {
     make_edge(m,i);
 }
 
-function make_face5(i,j,k,m,n) {
-    faces.push( [i,j,k,m,n] );
-    make_edge(i,j);
-    make_edge(j,k);
-    make_edge(k,m);
-    make_edge(m,n);
-    make_edge(n,i);
-}
-
 function make_zome() {
 
     clear();
 
-    // TODO: if K is vertical coord of 4th point, add new parameter to control its horizontal position
-
-    var world_scale = scale * 0.001;
-
-    var M = N-1; // number of rows of faces
-    var cos_theta = Math.cos(deg2rad(theta));
-    var sin_theta = Math.sin(deg2rad(theta));
-    var zome_height = H * world_scale;
-    var total_polar_height = zome_height / D;
-    var tip_Z = zome_height / 2;
-    var kite_ratio_sum = (K==1) ? (M+1) : (1-Math.pow(K,M+1)) / (1-K);
-    var top_edge_length =  total_polar_height / ( kite_ratio_sum * cos_theta );
-    ground_level = tip_Z - zome_height;
-
-    // add the top vert
-    add_vert( p3( 0, 0, tip_Z ) );
-
-    // add the top ring of vertices
-    var ring1_radius = top_edge_length * sin_theta;
-    var ring1_height = top_edge_length * cos_theta;
-    for(var i=0; i<N; i++) {
+    var H = height * R; // height of first ring
+    var P = bulge * R; // shift outwards of first ring
+    var Z = -10; // vertical position of base
+    // add the base ring of vertices
+    for(var i=0;i<N;i++) {
         var a = i*2*Math.PI / N;
-        var p = p3( ring1_radius * Math.sin(a), ring1_radius * Math.cos(a), tip_Z-ring1_height );
-        add_vert( p ); // we assume that this is above ground level
+        add_vert( p3( R * Math.sin(a), R * Math.cos(a), Z ) );
     }
-
-    // add the faces
-    var hit_ground = false;
-    var triangles = [];
-    for(var r=1;r<=M && !hit_ground;r++) {
+    // add the next ring of vertices
+    for(var i=0;i<N;i++) {
+        var b = (i+0.5)*2*Math.PI / N;
+        add_vert( p3( (R+P) * Math.sin(b), (R+P) * Math.cos(b), Z+H ) );
+        make_face3( i, (i+1)%N, N+i );
+    }
+    angles.push( angle( verts[0], verts[N], verts[1] ) );
+    // add the remaining rings
+    for(var r=2;r<M;r++) {
         for(var i=0;i<N;i++) {
-            var ia = (r-1)*N+1+i;
-            var ib = Math.max(0,(r-2)*N+1+(i+1)%N);
-            var ic = (r-1)*N+1+(i+1)%N;
+            var ia = (r-1)*N+i;
+            var ib = (r-2)*N+(i+1)%N;
+            var ic = (r-1)*N+(i+1)%N;
+            var id = r*N+i;
             var a = verts[ ia ];
             var b = verts[ ib ];
             var c = verts[ ic ];
             var d = add(b,mul(sub(mid(a,c),b),1+K)); // make a kite (rhombus if K=1)
-            if( d.z >= ground_level ) {
-                var id = add_vert( d );
-                make_face4( ia, ib, ic, id );
-                if(d.z === ground_level) {
-                    // deal with case where this ring is exactly on the ground
-                    hit_ground = true;
-                    triangles.push(id);
-                    triangles.push(id);
-                    triangles.push(ic);
-                }
-            }
-            else {
-                var u = (ground_level - a.z ) / (d.z - a.z);
-                var e = add(a,mul(sub(d,a),u));
-                var f = add(c,mul(sub(d,c),u));
-                var ie = add_vert( e );
-                var i_f = add_vert( f );
-                make_face5( ia, ib, ic, i_f, ie );
-                hit_ground = true;
-                triangles.push(ie);
-                triangles.push(i_f);
-                triangles.push(ic);
+            add_vert( d );
+            make_face4( ia, ib, ic, id );
+            if( i == 0 ) {
+                angles.push( angle(a,b,c) );
             }
         }
     }
-
-    // add the bottom row of triangles as needed
-    if(triangles.length>0) {
-        for(var i=0;i<triangles.length;i+=3) {
-            var ia = triangles[(i+1)%triangles.length];
-            var ib = triangles[(i+2)%triangles.length];
-            var ic = triangles[(i+3)%triangles.length];
-            if( ia < verts.length && ib < verts.length && ic < verts.length ) {
-                make_face3( ia, ib, ic );
-            }
-        }
-    }
-
-    var widest_diameter = 0;
-    for(var iVert = 0; iVert < verts.length; iVert++) {
-        var v = verts[ iVert ];
-        var diameter = dist( v, p3( 0, 0, v.z ) ) / world_scale;
-        if( diameter > widest_diameter ) {
-            widest_diameter = diameter;
-        }
-    }
-    var base_diameter = dist( verts[verts.length-1], p3(0,0,ground_level) ) / world_scale;
-    document.getElementById("base_diameter_label").innerHTML = "Base diameter: "+base_diameter.toFixed(0)+" mm";
-    document.getElementById("widest_diameter_label").innerHTML = "Widest diameter: "+widest_diameter.toFixed(0)+" mm";
-
 }
 
 function init() {
@@ -246,72 +178,72 @@ function init() {
     canvas = document.getElementById('canvas');
     ctx = canvas.getContext('2d');
 
-    camera_theta = Math.PI / 2;
+    theta = Math.PI / 2;
     view_height = 0.5;
     camera = { p:p3(0,3,-6),
-               x:p3(1,0,0),
-               y:p3(0,1,0),
-               z:p3(0,0,1),
+               x:p3(1,0,0), 
+               y:p3(0,1,0), 
+               z:p3(0,0,1), 
                f:canvas.height,
-               pp:p2(canvas.width/2-100,canvas.height/2)
+               pp:p2(canvas.width/2-100,canvas.height/2) 
              };
     repositionCamera();
-
-    var scale_slider = document.getElementById("scale_slider");
-    scale_slider.updatefromvalue = function() {
-        scale = parseFloat(this.value);
-        document.getElementById("scale_label").innerHTML = "Render scale: "+scale;
+             
+    var width_slider = document.getElementById("width_slider");
+    width_slider.updatefromvalue = function() {
+        R = parseFloat(this.value);
+        document.getElementById("width_label").innerHTML = "Width: "+R;
     }
-    scale_slider.oninput = function() {
+    width_slider.oninput = function() {
         this.updatefromvalue();
         make_zome();
     }
-    scale_slider.updatefromvalue();
+    width_slider.updatefromvalue();
 
-    var H_slider = document.getElementById("height_slider");
-    H_slider.updatefromvalue = function() {
-        H = parseFloat(this.value);
-        document.getElementById("height_label").innerHTML = "Height: "+H+" mm";
+    var height_slider = document.getElementById("height_slider");
+    height_slider.updatefromvalue = function() {
+        height = parseFloat(this.value);
+        document.getElementById("height_label").innerHTML = "Height: "+height;
     }
-    H_slider.oninput = function() {
+    height_slider.oninput = function() {
         this.updatefromvalue();
         make_zome();
     }
-    H_slider.updatefromvalue();
+    height_slider.updatefromvalue();
 
-    var N_slider = document.getElementById("N_slider");
-    N_slider.updatefromvalue = function() {
+    var bulge_slider = document.getElementById("bulge_slider");
+    bulge_slider.updatefromvalue = function() {
+        bulge = parseFloat(this.value);
+        document.getElementById("bulge_label").innerHTML = "Bulge: "+bulge;
+    }
+    bulge_slider.oninput = function() {
+        this.updatefromvalue();
+        make_zome();
+    }
+    bulge_slider.updatefromvalue();
+
+    var rings_slider = document.getElementById("rings_slider");
+    rings_slider.updatefromvalue = function() {
+        M = parseFloat(this.value);
+        document.getElementById("rings_label").innerHTML = "Number of rings: "+M;
+    }
+    rings_slider.oninput = function() {
+        this.updatefromvalue();
+        make_zome();
+    }
+    rings_slider.updatefromvalue();
+    
+    var triangles_slider = document.getElementById("triangles_slider");
+    triangles_slider.updatefromvalue = function() {
         N = parseFloat(this.value);
-        document.getElementById("N_label").innerHTML = "N: "+N;
+        document.getElementById("triangles_label").innerHTML = "Number of triangles: "+N;
     }
-    N_slider.oninput = function() {
+    triangles_slider.oninput = function() {
         this.updatefromvalue();
         make_zome();
     }
-    N_slider.updatefromvalue();
-
-    var theta_slider = document.getElementById("theta_slider");
-    theta_slider.updatefromvalue = function() {
-        theta = parseFloat(this.value);
-        document.getElementById("theta_label").innerHTML = "Angle: "+theta;
-    }
-    theta_slider.oninput = function() {
-        this.updatefromvalue();
-        make_zome();
-    }
-    theta_slider.updatefromvalue();
-
-    var D_slider = document.getElementById("D_slider");
-    D_slider.updatefromvalue = function() {
-        D = parseFloat(this.value);
-        document.getElementById("D_label").innerHTML = "Cut proportion: "+D;
-    }
-    D_slider.oninput = function() {
-        this.updatefromvalue();
-        make_zome();
-    }
-    D_slider.updatefromvalue();
-
+    triangles_slider.updatefromvalue();
+    
     var kite_slider = document.getElementById("kite_slider");
     kite_slider.updatefromvalue = function() {
         K = parseFloat(this.value);
@@ -322,9 +254,9 @@ function init() {
         make_zome();
     }
     kite_slider.updatefromvalue();
-
+    
     make_zome();
-
+    
     redraw();
 
     canvas.addEventListener( 'mousemove', onMouseMove, false );
@@ -334,7 +266,7 @@ function init() {
     canvas.addEventListener( 'touchend', onMouseUp, false );
     canvas.addEventListener( 'mouseup',  onMouseUp, false );
     canvas.addEventListener( 'mouseout',  onMouseUp, false );
-
+    
     isSpinning = true;
     animate();
 }
@@ -342,20 +274,20 @@ function init() {
 function camera_projection( p, camera ) {
     var ray = sub( p, camera.p ); // the ray from camera center to point
     var cp = p3( dot( camera.x, ray ), dot( camera.y, ray ), dot( camera.z, ray ) ); // into camera space
-    return p3( cp.x * camera.f / cp.z + camera.pp.x,
+    return p3( cp.x * camera.f / cp.z + camera.pp.x, 
                canvas.height - ( cp.y * camera.f / cp.z + camera.pp.y ),
                cp.z );
 }
 
 function redraw() {
     drawMesh();
-    //drawNet();
+    drawNet();
 }
 
-function point( p ) {
-    ctx.beginPath();
-    ctx.arc( p.x, p.y, 2, 0, 2.0 * Math.PI );
-    ctx.fill();
+function point( p ) { 
+    ctx.beginPath(); 
+    ctx.arc( p.x, p.y, 2, 0, 2.0 * Math.PI ); 
+    ctx.fill(); 
 }
 
 function drawMesh() {
@@ -365,83 +297,44 @@ function drawMesh() {
         verts2d[ iVert ] = camera_projection( verts[ iVert ], camera );
     }
 
-    // also project the verts onto the ground
-    var sun = p3( -50, 50, 70 );
-    var shadow_verts = [];
-    for( var iVert = 0; iVert < verts.length; ++iVert ) {
-        var vert = verts[iVert];
-        var u = (ground_level - sun.z) / (vert.z - sun.z);
-        var p = add( sun, mul( sub( vert, sun ), u ) );
-        shadow_verts2d[ iVert ] = camera_projection( p, camera );
-    }
-
     ctx.strokeStyle = "rgb(200,200,200)";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
-
+    
     // draw the faces
     ctx.fillStyle = "rgba(200,210,255,0.2)";
     for( var iFace = 0; iFace < faces.length; ++iFace ) {
-        var iVert = faces[iFace][0];
-        if( iVert < verts2d.length ) {
-            var a = verts2d[ iVert ];
-            ctx.beginPath();
-            ctx.moveTo( a.x, a.y );
-            for( var i = 1; i < faces[iFace].length; ++i ) {
-                var iVert = faces[iFace][i];
-                if( iVert < verts2d.length ) {
-                    a = verts2d[ iVert ];
-                    ctx.lineTo( a.x, a.y );
-                }
-                else {
-                    console.log('Invalid vert index:',iVert,'in face',iFace);
-                }
-            }
-            ctx.fill();
+        var a = verts2d[ faces[iFace][0] ];
+        ctx.beginPath();
+        ctx.moveTo( a.x, a.y );
+        for( var i = 1; i < faces[iFace].length; ++i ) {
+            a = verts2d[ faces[iFace][i] ];
+            ctx.lineTo( a.x, a.y );
         }
+        ctx.fill();
     }
-
-    // draw the shadow edges
-    ctx.strokeStyle = "rgb(240,240,240)";
-    ctx.beginPath();
-    for( var i = 0; i < edges.length; ++i ) {
-        var iVertA = edges[i][0];
-        var iVertB = edges[i][1];
-        if( iVertA < shadow_verts2d.length && iVertB < shadow_verts2d.length ) {
-            var a = shadow_verts2d[ iVertA ];
-            var b = shadow_verts2d[ iVertB ];
-            ctx.moveTo( a.x, a.y );
-            ctx.lineTo( b.x, b.y );
-        }
-    }
-    ctx.stroke();
-
+    
     // draw the edges
     ctx.strokeStyle = "rgb(200,200,200)";
     ctx.beginPath();
     for( var i = 0; i < edges.length; ++i ) {
-        var iVertA = edges[i][0];
-        var iVertB = edges[i][1];
-        if( iVertA < verts2d.length && iVertB < verts2d.length ) {
-            var a = verts2d[ iVertA ];
-            var b = verts2d[ iVertB ];
-            ctx.moveTo( a.x, a.y );
-            ctx.lineTo( b.x, b.y );
-        }
+        var a = verts2d[ edges[i][0] ];
+        var b = verts2d[ edges[i][1] ];
+        ctx.moveTo( a.x, a.y );
+        ctx.lineTo( b.x, b.y );
     }
     ctx.stroke();
 
     // draw the verts
     ctx.fillStyle = "rgb(0,0,0)";
-    for( var i = 0; i < verts2d.length; ++i ) {
+    for( var i = 0; i < verts2d.length; ++i )
         point( verts2d[i], "" );
-    }
 }
 
 function drawNet() {
     ctx.strokeStyle = "rgb(0,0,0)";
     ctx.beginPath();
-
+    
     // first triangle:
     var a = p2(500,580);
     var b = p2(a.x+R*10,580);
@@ -467,7 +360,7 @@ function drawNet() {
         b = new_b;
         c = new_c;
     }
-
+    
     ctx.stroke();
 }
 
@@ -481,7 +374,7 @@ function drawRect( x, y, w, h ) {
 function animate() {
     if( isSpinning ) {
         // rotate round
-        camera_theta += 0.004;
+        theta += 0.004;
         repositionCamera();
     }
     redraw();
@@ -506,20 +399,18 @@ instructions how to enable JavaScript in your web browser</a>.
 <tr>
 <td><canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas></td>
 <td width="300px" valign="center">
-<p id="scale_label">Render scale:</p>
-<div class="slidecontainer"><input type="range" min="0.5" max="200" value="10" step="0.1" class="slider" id="scale_slider"></div>
+<p id="width_label">Width:</p>
+<div class="slidecontainer"><input type="range" min="0.3" max="15" value="10" step="0.001" class="slider" id="width_slider"></div>
 <p id="height_label">Height:</p>
-<div class="slidecontainer"><input type="range" min="100" max="10000" value="2000" step="10" class="slider" id="height_slider"></div>
-<p id="N_label">N:</p>
-<div class="slidecontainer"><input type="range" min="3" max="25" value="14" step="1" class="slider" id="N_slider"></div>
-<p id="theta_label">theta:</p>
-<div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="1" class="slider" id="theta_slider"></div>
-<p id="D_label">Cut proportion:</p>
-<div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.6" step="0.01" class="slider" id="D_slider"></div>
+<div class="slidecontainer"><input type="range" min="0.0" max="0.7" value="0.3" step="0.0001" class="slider" id="height_slider"></div>
+<p id="bulge_label">Bulge:</p>
+<div class="slidecontainer"><input type="range" min="-1" max="1" value="0.035" step="0.0001" class="slider" id="bulge_slider"></div>
+<p id="rings_label">Number of rings:</p>
+<div class="slidecontainer"><input type="range" min="2" max="30" value="8" step="1" class="slider" id="rings_slider"></div>
+<p id="triangles_label">Number of triangles:</p>
+<div class="slidecontainer"><input type="range" min="3" max="30" value="12" step="1" class="slider" id="triangles_slider"></div>
 <p id="kite_label">Kite ratio:</p>
-<div class="slidecontainer"><input type="range" min="0.8" max="1.2" value="1" step="0.001" class="slider" id="kite_slider"></div>
-<p id="base_diameter_label">Base diameter:</p>
-<p id="widest_diameter_label">Widest diameter:</p>
+<div class="slidecontainer"><input type="range" min="0.1" max="3" value="1" step="0.001" class="slider" id="kite_slider"></div>
 </td>
 </tr>
 </table>
