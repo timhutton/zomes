@@ -149,7 +149,7 @@ function make_zome() {
 
     // TODO: if K is vertical coord of 4th point, add new parameter to control its horizontal position
 
-    var world_scale = scale * 0.001;
+    world_scale = scale * 0.001;
 
     var M = N-1; // number of rows of faces
     var cos_theta = Math.cos(deg2rad(theta));
@@ -344,7 +344,7 @@ function point( ctx, p ) {
 
 function redraw() {
     drawMesh();
-    //drawNet();
+    drawNet();
 }
 
 function drawMesh() {
@@ -436,35 +436,26 @@ function drawNet() {
     var canvas = document.getElementById('canvas2');
     var ctx = canvas.getContext('2d');
 
+    ctx.strokeStyle = "rgb(200,200,200)";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "rgba(200,210,255,0.2)";
     ctx.strokeStyle = "rgb(0,0,0)";
     ctx.beginPath();
 
     // first triangle:
-    var a = p2(500,580);
-    var b = p2(a.x+R*10,580);
-    var angle = angles[0];
-    var h = 0.5*dist(a,b) / Math.tan(angles[0]/2);
-    var c = add(mid(a,b),p2(0,-h));
-    ctx.moveTo( a.x, a.y );
-    ctx.lineTo( b.x, b.y );
-    ctx.lineTo( c.x, c.y );
-    ctx.lineTo( a.x, a.y );
-    // remaining rhombi
-    for(var i=1;i<angles.length;i++) {
-        var angle = angles[i];
-        var bc = sub(c,b);
-        var rotated_bc = rot2d
-        var new_b = add( b, rot2d(bc, angle) );
-        var new_c = add(b,mul(sub(mid(c,new_b),b),1+K)); // make a kite (rhombus if K=1)
-        ctx.moveTo( c.x, c.y );
-        ctx.lineTo( b.x, b.y );
-        ctx.lineTo( new_b.x, new_b.y );
-        ctx.lineTo( new_c.x, new_c.y );
-        ctx.lineTo( c.x, c.y );
-        b = new_b;
-        c = new_c;
-    }
+    var edge1 = 100;
+    var tri_height = 120;
+    var a = p2( 100, canvas.height-100 );
+    var b = p2( a.x+edge1, a.y );
+    var c = p2( a.x+edge1/2, a.y - tri_height );
+    ctx.moveTo(a.x,a.y);
+    ctx.lineTo(b.x,b.y);
+    ctx.lineTo(c.x,c.y);
+    ctx.lineTo(a.x,a.y);
 
+    ctx.fill();
     ctx.stroke();
 }
 
@@ -476,6 +467,33 @@ function animate() {
     }
     redraw();
     requestAnimationFrame( animate );
+}
+
+function download(filename, type, text) {
+  var element = document.createElement('a');
+  element.setAttribute('href', 'data:'+type+';charset=utf-8,' + encodeURIComponent(text));
+  element.setAttribute('download', filename);
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+}
+
+function downloadOBJ() {
+    var obj = "# OBJ produced by https://timhutton.github.io/zomes/\n";
+    for( var iVert = 0; iVert < verts.length; iVert++ ) {
+        var v = mul( add( verts[ iVert ], p3( 0, 0, -ground_level ) ), 1 / world_scale );
+        obj += "v " + v.x + " " + v.y + " " + v.z + "\n";
+    }
+    for( var iFace = 0; iFace < faces.length; ++iFace ) {
+        obj += "f";
+        for( var iFaceVert = 0; iFaceVert < faces[iFace].length; iFaceVert++ ) {
+            var iVert = faces[iFace][iFaceVert];
+            obj += " " + (iVert+1); // (OBJ format uses 1-based indices)
+        }
+        obj += "\n";
+    }
+    download("zome.obj", "application/object", obj);
 }
 
 window.onload = init;
@@ -514,6 +532,7 @@ instructions how to enable JavaScript in your web browser</a>.
       <div class="slidecontainer"><input type="range" min="0.8" max="1.2" value="1" step="0.001" class="slider" id="kite_slider"></div>
       <p id="base_diameter_label">Base diameter:</p>
       <p id="widest_diameter_label">Widest diameter:</p>
+      <button onclick="downloadOBJ();">Download 3D scene as OBJ</button>
     </td>
   </tr>
 </table>
