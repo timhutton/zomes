@@ -148,6 +148,8 @@ function make_zome() {
     clear();
 
     // TODO: if K is vertical coord of 4th point, add new parameter to control its horizontal position
+    
+    pieces = "From top to bottom:<ol>";
 
     world_scale = scale * 0.001;
 
@@ -172,7 +174,7 @@ function make_zome() {
         var p = p3( ring1_radius * Math.sin(a), ring1_radius * Math.cos(a), tip_Z-ring1_height );
         add_vert( p ); // we assume that this is above ground level
     }
-
+    
     // add the faces
     var hit_ground = false;
     var triangles = [];
@@ -188,6 +190,18 @@ function make_zome() {
             if( d.z >= ground_level ) {
                 var id = add_vert( d );
                 make_face4( ia, ib, ic, id );
+                if(i==0) {
+                    var width = dist( a, c ) / world_scale;
+                    if( K===1 ) {
+                        var height = dist( b, d ) / world_scale;
+                        pieces += "<li>"+N+" diamonds with width "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm</li>";
+                    }
+                    else {
+                        var top_height = dist( b, mid( a, c ) ) / world_scale;
+                        var bottom_height = dist( d, mid( a, c ) ) / world_scale;
+                        pieces += "<li>"+N+" kites with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and bottom half height "+bottom_height.toFixed(0)+" mm</li>";
+                    }
+                }
                 if(d.z === ground_level) {
                     // deal with case where this ring is exactly on the ground
                     hit_ground = true;
@@ -203,6 +217,15 @@ function make_zome() {
                 var ie = add_vert( e );
                 var i_f = add_vert( f );
                 make_face5( ia, ib, ic, i_f, ie );
+                if(i==0) {
+                    var width = dist( a, c ) / world_scale;
+                    var base = dist( e, f ) / world_scale;
+                    var top_height = dist( b, mid( a, c ) ) / world_scale;
+                    var bottom_height = dist( d, mid( a, c ) ) / world_scale;
+                    var reduced_bottom_height = dist( mid( e, f ), mid( a, c ) ) / world_scale;
+                    var shape = (K===1)?"diamonds":"kites";
+                    pieces += "<li>"+N+" truncated "+shape+" with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and full bottom half height "+bottom_height.toFixed(0)+" mm reduced to "+reduced_bottom_height.toFixed(0)+" mm, leaving base of "+base.toFixed(0)+" mm</li>";
+                }
                 hit_ground = true;
                 triangles.push(ie);
                 triangles.push(i_f);
@@ -219,9 +242,19 @@ function make_zome() {
             var ic = triangles[(i+3)%triangles.length];
             if( ia < verts.length && ib < verts.length && ic < verts.length ) {
                 make_face3( ia, ib, ic );
+                if(i==0) {
+                    var a = verts[ ia ];
+                    var b = verts[ ib ];
+                    var c = verts[ ic ];
+                    var width = dist( a, c ) / world_scale;
+                    var height = dist( b, mid( a, c ) ) / world_scale;
+                    pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm</li>";
+                }
             }
         }
     }
+    
+    pieces += "</ol>";
 
     var widest_diameter = 0;
     for(var iVert = 0; iVert < verts.length; iVert++) {
@@ -234,6 +267,8 @@ function make_zome() {
     var base_diameter = dist( verts[verts.length-1], p3(0,0,ground_level) ) / world_scale;
     document.getElementById("base_diameter_label").innerHTML = "Base diameter: "+base_diameter.toFixed(0)+" mm";
     document.getElementById("widest_diameter_label").innerHTML = "Widest diameter: "+widest_diameter.toFixed(0)+" mm";
+    
+    document.getElementById("pieces_label").innerHTML = pieces;
 }
 
 function init() {
@@ -429,6 +464,12 @@ function drawMesh() {
     for( var i = 0; i < verts2d.length; ++i ) {
         point( ctx, verts2d[i], "" );
     }
+    
+    // draw a dot in the center of the base
+    ctx.beginPath();
+    var p = camera_projection( p3( 0, 0, ground_level ), camera );
+    ctx.fillRect(p.x,p.y,1,1);
+    ctx.fill();
 }
 
 function drawNet() {
@@ -439,24 +480,8 @@ function drawNet() {
     ctx.strokeStyle = "rgb(200,200,200)";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "rgba(200,210,255,0.2)";
-    ctx.strokeStyle = "rgb(0,0,0)";
-    ctx.beginPath();
-
-    // first triangle:
-    var edge1 = 100;
-    var tri_height = 120;
-    var a = p2( 100, canvas.height-100 );
-    var b = p2( a.x+edge1, a.y );
-    var c = p2( a.x+edge1/2, a.y - tri_height );
-    ctx.moveTo(a.x,a.y);
-    ctx.lineTo(b.x,b.y);
-    ctx.lineTo(c.x,c.y);
-    ctx.lineTo(a.x,a.y);
-
-    ctx.fill();
-    ctx.stroke();
+    
+    // TODO
 }
 
 function animate() {
@@ -512,27 +537,33 @@ instructions how to enable JavaScript in your web browser</a>.
 
 <table border="0">
   <tr>
-    <td>
+    <td valign="top" >
       <canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas>
-      <br>
-      <canvas id="canvas2" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas>
     </td>
-    <td width="300px" valign="top">
+    <td width="300px" valign="top" align="left" style="padding: 0px 0px 0px 30px;">
       <p id="scale_label">Render scale:</p>
-      <div class="slidecontainer"><input type="range" min="0.5" max="200" value="10" step="0.1" class="slider" id="scale_slider"></div>
+      <div class="slidecontainer"><input type="range" min="0.5" max="200" value="10" step="0.01" class="slider" id="scale_slider"></div>
       <p id="height_label">Height:</p>
-      <div class="slidecontainer"><input type="range" min="100" max="10000" value="2000" step="10" class="slider" id="height_slider"></div>
+      <div class="slidecontainer"><input type="range" min="100" max="10000" value="2000" step="5" class="slider" id="height_slider"></div>
       <p id="N_label">N:</p>
       <div class="slidecontainer"><input type="range" min="3" max="25" value="14" step="1" class="slider" id="N_slider"></div>
       <p id="theta_label">theta:</p>
-      <div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="1" class="slider" id="theta_slider"></div>
+      <div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="0.1" class="slider" id="theta_slider"></div>
       <p id="D_label">Cut proportion:</p>
-      <div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.6" step="0.01" class="slider" id="D_slider"></div>
+      <div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.6" step="0.001" class="slider" id="D_slider"></div>
       <p id="kite_label">Kite ratio:</p>
       <div class="slidecontainer"><input type="range" min="0.8" max="1.2" value="1" step="0.001" class="slider" id="kite_slider"></div>
       <p id="base_diameter_label">Base diameter:</p>
       <p id="widest_diameter_label">Widest diameter:</p>
       <button onclick="downloadOBJ();">Download 3D scene as OBJ</button>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top" >
+      <canvas id="canvas2" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas>
+    </td>
+    <td valign="top" align="left" style="padding: 0px 0px 0px 30px;">
+      <p id="pieces_label">From top to bottom:</p>
     </td>
   </tr>
 </table>
