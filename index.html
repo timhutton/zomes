@@ -97,7 +97,7 @@ function onMouseDown( evt ) {
 function repositionCamera() {
     var look_at = p3(0,0,0);
     var d = 40;
-    var vd = d * view_height;
+    var vd = Math.max( ground_level, d * view_height );
     var hd = Math.sqrt( d*d - vd*vd );
     camera.p = p3( hd*Math.cos(camera_theta), hd*Math.sin(camera_theta), vd  );
     camera.z = normalize( sub( look_at, camera.p ) );
@@ -285,6 +285,7 @@ function init() {
                f:canvas.height,
                pp:p2(canvas.width/2,canvas.height/2)
              };
+    ground_level = 0;
     repositionCamera();
 
     var scale_slider = document.getElementById("scale_slider");
