@@ -177,7 +177,9 @@ function make_zome() {
     }
     
     // add the faces
+    var closest_dist_to_ground = Number.MAX_VALUE;
     var hit_ground = false;
+    var ground_level_with_tolerance = ground_level - 0.0001;
     var triangles = [];
     for(var r=1;r<=M && !hit_ground;r++) {
         for(var i=0;i<N;i++) {
@@ -188,7 +190,7 @@ function make_zome() {
             var b = verts[ ib ];
             var c = verts[ ic ];
             var d = add(b,mul(sub(mid(a,c),b),1+K)); // make a kite (rhombus if K=1)
-            if( d.z >= ground_level ) {
+            if( d.z >= ground_level_with_tolerance ) {
                 var id = add_vert( d );
                 make_face4( ia, ib, ic, id );
                 if(i==0) {
@@ -203,7 +205,7 @@ function make_zome() {
                         pieces += "<li>"+N+" kites with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and bottom half height "+bottom_height.toFixed(0)+" mm</li>";
                     }
                 }
-                if(d.z === ground_level) {
+                if(Math.abs(d.z-ground_level) < 0.0001) {
                     // deal with case where this ring is exactly on the ground
                     hit_ground = true;
                     triangles.push(id);
@@ -231,6 +233,13 @@ function make_zome() {
                 triangles.push(ie);
                 triangles.push(i_f);
                 triangles.push(ic);
+            }
+            // keep track of the nearest cut value that would intersect a kite/diamond tip
+            var dist_to_ground = Math.abs( d.z - ground_level );
+            if( dist_to_ground < closest_dist_to_ground ) {
+                closest_dist_to_ground = dist_to_ground;
+                cut_suggested = ( tip_Z - d.z ) / total_polar_height;
+                console.log(cut_suggested);
             }
         }
     }
@@ -335,7 +344,7 @@ function init() {
     var D_slider = document.getElementById("D_slider");
     D_slider.updatefromvalue = function() {
         D = parseFloat(this.value);
-        document.getElementById("D_label").innerHTML = "Cut proportion: "+D;
+        document.getElementById("D_label").innerHTML = "Cut proportion: "+D.toFixed(3);
     }
     D_slider.oninput = function() {
         this.updatefromvalue();
@@ -346,7 +355,7 @@ function init() {
     var kite_slider = document.getElementById("kite_slider");
     kite_slider.updatefromvalue = function() {
         K = parseFloat(this.value);
-        document.getElementById("kite_label").innerHTML = "Kite ratio: "+K;
+        document.getElementById("kite_label").innerHTML = "Kite ratio: "+K.toFixed(3);
         document.getElementById("diamond_button").disabled = (K===1);
     }
     kite_slider.oninput = function() {
@@ -530,6 +539,12 @@ function setToDiamond() {
     kite_slider.oninput();
 }
 
+function snapCutToNearest() {
+    var D_slider = document.getElementById("D_slider");
+    D_slider.value = cut_suggested;
+    D_slider.oninput();
+}
+
 window.onload = init;
 
 </script>
@@ -558,8 +573,12 @@ instructions how to enable JavaScript in your web browser</a>.
       <div class="slidecontainer"><input type="range" min="3" max="25" value="14" step="1" class="slider" id="N_slider"></div>
       <p id="theta_label">theta:</p>
       <div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="0.1" class="slider" id="theta_slider"></div>
-      <p id="D_label">Cut proportion:</p>
-      <div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.6" step="0.001" class="slider" id="D_slider"></div>
+      <p>
+        <div id="D_label" style="float:left">Cut proportion:</div>
+        <button style="float:right" onclick="snapCutToNearest();" id="snap_cut_button">Snap to nearest</button>
+        <div style="clear: both;"></div>
+      </p>
+      <div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.6" step="any" class="slider" id="D_slider"></div>
       <p>
         <div id="kite_label" style="float:left">Kite ratio:</div>
         <button style="float:right" onclick="setToDiamond();" id="diamond_button">Set to diamond</button>
