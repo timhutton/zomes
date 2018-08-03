@@ -67,6 +67,7 @@ function mid( a, b ) { return mul( add( a, b ), 0.5 ); }
 function angle( p1, p2, p3 ) { var a = dist(p2,p3); var b = dist(p1,p2); var c = dist(p1,p3); return Math.acos( ( c*c - a*a - b*b ) / ( -2*a*b ) ); }
 function rot2d( v, theta ) { var s = Math.sin(theta); var c = Math.cos(theta); return p2( v.x*c - v.y*s, v.x*s + v.y*c ); }
 function deg2rad(deg) { return deg * Math.PI / 180; }
+function rad2deg(rad) { return 180.0 * rad / Math.PI; }
 
 function clear() {
     verts = [];
@@ -190,6 +191,7 @@ function make_zome() {
             var b = verts[ ib ];
             var c = verts[ ic ];
             var d = add(b,mul(sub(mid(a,c),b),1+K)); // make a kite (rhombus if K=1)
+            var top_angle = rad2deg( angle( a, b, c ) );
             if( d.z >= ground_level_with_tolerance ) {
                 var id = add_vert( d );
                 make_face4( ia, ib, ic, id );
@@ -197,12 +199,12 @@ function make_zome() {
                     var width = dist( a, c ) / world_scale;
                     if( K===1 ) {
                         var height = dist( b, d ) / world_scale;
-                        pieces += "<li>"+N+" diamonds with width "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm</li>";
+                        pieces += "<li>"+N+" diamonds with width "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
                     }
                     else {
                         var top_height = dist( b, mid( a, c ) ) / world_scale;
                         var bottom_height = dist( d, mid( a, c ) ) / world_scale;
-                        pieces += "<li>"+N+" kites with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and bottom half height "+bottom_height.toFixed(0)+" mm</li>";
+                        pieces += "<li>"+N+" kites with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and bottom half height "+bottom_height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
                     }
                 }
                 if(Math.abs(d.z-ground_level) < 0.0001) {
@@ -227,7 +229,7 @@ function make_zome() {
                     var bottom_height = dist( d, mid( a, c ) ) / world_scale;
                     var reduced_bottom_height = dist( mid( e, f ), mid( a, c ) ) / world_scale;
                     var shape = (K===1)?"diamonds":"kites";
-                    pieces += "<li>"+N+" truncated "+shape+" with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and full bottom half height "+bottom_height.toFixed(0)+" mm reduced to "+reduced_bottom_height.toFixed(0)+" mm, leaving base of "+base.toFixed(0)+" mm</li>";
+                    pieces += "<li>"+N+" truncated "+shape+" with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and full bottom half height "+bottom_height.toFixed(0)+" mm reduced to "+reduced_bottom_height.toFixed(0)+" mm, leaving base of "+base.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
                 }
                 hit_ground = true;
                 triangles.push(ie);
@@ -256,9 +258,10 @@ function make_zome() {
                     var a = verts[ ia ];
                     var b = verts[ ib ];
                     var c = verts[ ic ];
+                    var top_angle = rad2deg( angle( a, b, c ) );
                     var width = dist( a, c ) / world_scale;
                     var height = dist( b, mid( a, c ) ) / world_scale;
-                    pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm</li>";
+                    pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
                 }
             }
         }
@@ -335,7 +338,7 @@ function init() {
     var theta_slider = document.getElementById("theta_slider");
     theta_slider.updatefromvalue = function() {
         theta = parseFloat(this.value);
-        document.getElementById("theta_label").innerHTML = "Angle: "+theta;
+        document.getElementById("theta_label").innerHTML = "Angle of top strut to vertical: "+theta+" degrees";
     }
     theta_slider.oninput = function() {
         this.updatefromvalue();
@@ -573,7 +576,7 @@ instructions how to enable JavaScript in your web browser</a>.
       <div class="slidecontainer"><input type="range" min="100" max="10000" value="2000" step="5" class="slider" id="height_slider"></div>
       <p id="N_label">N:</p>
       <div class="slidecontainer"><input type="range" min="3" max="25" value="14" step="1" class="slider" id="N_slider"></div>
-      <p id="theta_label">theta:</p>
+      <p id="theta_label">Angle of top strut to vertical:</p>
       <div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="0.1" class="slider" id="theta_slider"></div>
       <p>
         <div id="D_label" style="float:left">Cut proportion:</div>
