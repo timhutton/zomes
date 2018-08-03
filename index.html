@@ -275,8 +275,10 @@ function make_zome() {
         }
     }
     var base_diameter = dist( verts[verts.length-1], p3(0,0,ground_level) ) / world_scale;
+    var strut_length = dist( verts[0], verts[1] ) / world_scale;
     document.getElementById("base_diameter_label").innerHTML = "Base diameter: "+base_diameter.toFixed(0)+" mm";
     document.getElementById("widest_diameter_label").innerHTML = "Widest diameter: "+widest_diameter.toFixed(0)+" mm";
+    document.getElementById("strut_length_label").innerHTML = "Strut length: "+((K==1)?(strut_length.toFixed(0)+" mm"):"varies");
     
     document.getElementById("pieces_label").innerHTML = pieces;
 }
@@ -587,6 +589,7 @@ instructions how to enable JavaScript in your web browser</a>.
       <div class="slidecontainer"><input type="range" min="0.8" max="1.2" value="1" step="0.001" class="slider" id="kite_slider"></div>
       <p id="base_diameter_label">Base diameter:</p>
       <p id="widest_diameter_label">Widest diameter:</p>
+      <p id="strut_length_label">Strut length:</p>
       <button onclick="downloadOBJ();">Download 3D scene as OBJ</button>
     </td>
   </tr>
