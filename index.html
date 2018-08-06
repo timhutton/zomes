@@ -68,6 +68,8 @@ function angle( p1, p2, p3 ) { var a = dist(p2,p3); var b = dist(p1,p2); var c =
 function rot2d( v, theta ) { var s = Math.sin(theta); var c = Math.cos(theta); return p2( v.x*c - v.y*s, v.x*s + v.y*c ); }
 function deg2rad(deg) { return deg * Math.PI / 180; }
 function rad2deg(rad) { return 180.0 * rad / Math.PI; }
+function plane_normal(a,b,c) { return cross( normalize( sub( b, a ) ), normalize( sub( c, a ) ) ); }
+function intersect_line_and_plane(a,v,p,n) { return add( a, mul( v, dot( sub(p,a), n ) / dot( v, n ) ) ); }
 
 function clear() {
     verts = [];
@@ -76,6 +78,7 @@ function clear() {
     edges = [];
     faces = [];
     angles = [];
+    planar_pieces = [];
 }
 
 function getMousePos( evt ) {
@@ -166,7 +169,8 @@ function make_zome() {
     ground_level = tip_Z - zome_height;
 
     // add the top vert
-    add_vert( p3( 0, 0, tip_Z ) );
+    var zome_tip = p3( 0, 0, tip_Z );
+    add_vert( zome_tip );
 
     // add the top ring of vertices
     var ring1_radius = top_edge_length * sin_theta;
@@ -241,7 +245,6 @@ function make_zome() {
             if( dist_to_ground < closest_dist_to_ground ) {
                 closest_dist_to_ground = dist_to_ground;
                 cut_suggested = ( tip_Z - d.z ) / total_polar_height;
-                console.log(cut_suggested);
             }
         }
     }
@@ -270,47 +273,78 @@ function make_zome() {
     pieces += "</ol>";
 
     var add_overlaps = false;
+    planar_pieces = [];
     if(add_overlaps) {
+        var base_center = p3( 0, 0, ground_level );
         var overlap_mm = 30;
         var overlap = overlap_mm * world_scale;
         var n_faces = faces.length;
         for(var iFace = 0; iFace < n_faces; iFace++ ) {
             var face = faces[iFace];
-            if( face.length != 4) { continue; }
-            var ia = face[0];
-            var ib = face[1];
-            var ic = face[2];
-            var id = face[3];
-            var a = verts[ ia ];
-            var b = verts[ ib ];
-            var c = verts[ ic ];
-            var d = verts[ id ];
-            var ba = dist( a, b );
-            var ae = mul( sub( a, b ), overlap / ba );
-            var bc = dist( c, b );
-            var cg = mul( sub( c, b ), overlap / bc );
-            var df = add( ae, cg );
-            var e = add( a, ae );
-            var f = add( d, df );
-            var g = add( c, cg );
-            // avoid intersection from vertex-neighbors
-            var zome_tip = p3( 0, 0, tip_Z );
-            var base_center = p3( 0, 0, ground_level );
-            var a_plane_normal = cross( normalize( sub( zome_tip, a ) ), normalize( sub( base_center, a ) ) );
-            var ef = sub( f, e );
-            var u = ( dot( a, a_plane_normal ) - dot( e, a_plane_normal ) ) / dot( ef, a_plane_normal );
-            var e2 = add( e, mul( ef, u ) );
-            var c_plane_normal = cross( normalize( sub( zome_tip, c ) ), normalize( sub( base_center, c ) ) );
-            var gf = sub( f, g );
-            var v = ( dot( c, c_plane_normal ) - dot( g, c_plane_normal ) ) / dot( gf, c_plane_normal );
-            var g2 = add( g, mul( gf, v ) );
-            var ie2 = add_vert( e2 );
-            var i_f = add_vert( f );
-            var ig2 = add_vert( g2 );
-            make_face4( ie2, ia, id, i_f );
-            make_face4( id, ic, ig2, i_f );
+            if( face.length < 4) { continue; }
+            if( face.length == 4 ) {
+                // extend diamond/kite with overlap on lower edges
+                var ia = face[0];
+                var ib = face[1];
+                var ic = face[2];
+                var id = face[3];
+                var a = verts[ ia ];
+                var b = verts[ ib ];
+                var c = verts[ ic ];
+                var d = verts[ id ];
+                var ae = mul( sub( a, b ), overlap / dist( a, b ) );
+                var cg = mul( sub( c, b ), overlap / dist( c, b ) );
+                var df = add( ae, cg );
+                var e = add( a, ae );
+                var f = add( d, df );
+                var g = add( c, cg );
+                // avoid intersection from vertex-neighbors
+                var e2 = intersect_line_and_plane( e, sub(f,e), a, plane_normal(a, zome_tip, base_center) );
+                var g2 = intersect_line_and_plane( g, sub(f,g), c, plane_normal(c, zome_tip, base_center) );
+                var ie2 = add_vert( e2 );
+                var i_f = add_vert( f );
+                var ig2 = add_vert( g2 );
+                make_face4( ie2, ia, id, i_f );
+                make_face4( id, ic, ig2, i_f );
+                if( (iFace % N) == 0 ) {
+                    planar_pieces.push( [ a, b, c, g2, f, e2 ] );
+                }
+            }
+            else if( face.length == 5 ) {
+                // extend diamond/kite with overlap on lower edges
+                var ia = face[0];
+                var ib = face[1];
+                var ic = face[2];
+                var id = face[3];
+                var ie = face[4];
+                var a = verts[ ia ];
+                var b = verts[ ib ];
+                var c = verts[ ic ];
+                var d = verts[ id ];
+                var e = verts[ ie ];
+                var af = mul( sub( a, b ), overlap / dist(a, b) );
+                var cj = mul( sub( c, b ), overlap / dist(c, b) );
+                var f = add( a, af );
+                var j = add( c, cj );
+                // avoid intersection from vertex-neighbors
+                var f2 = intersect_line_and_plane( f, sub(e,a), a, plane_normal(a, zome_tip, base_center) );
+                var j2 = intersect_line_and_plane( j, sub(d,c), c, plane_normal(c, zome_tip, base_center) );
+                var if2 = add_vert( f2 );
+                var ij2 = add_vert( j2 );
+                var g = intersect_line_and_plane( f, sub(e,a), e, zaxis() );
+                var h = intersect_line_and_plane( j, sub(d,c), d, zaxis() );
+                var ig = add_vert( g );
+                var ih = add_vert( h );
+                make_face4( if2, ia, ie, ig );
+                make_face4( id, ic, ij2, ih );
+                if( (iFace % N) == 0 ) {
+                    planar_pieces.push( [ a, b, c, j2, h, g, f2 ] );
+                }
+            }
         }
     }
+    
+    layout_planar_pieces();
 
     var widest_diameter = 0;
     for(var iVert = 0; iVert < verts.length; iVert++) {
@@ -327,6 +361,22 @@ function make_zome() {
     document.getElementById("strut_length_label").innerHTML = "Strut length: "+((K==1)?(strut_length.toFixed(0)+" mm"):"varies");
 
     document.getElementById("pieces_label").innerHTML = pieces;
+}
+
+function layout_planar_pieces() {
+    for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
+        var piece = planar_pieces[iPiece];
+        // verify planarity
+        var n = plane_normal( piece[0], piece[1], piece[2] );
+        for( var iVert=1; iVert < piece.length; iVert++) {
+            var d = Math.abs(dot(sub(piece[iVert],piece[0]),n));
+            if( d > 0.0000001) {
+                console.log('Warning: non-planar piece:',d);
+            }
+        }
+        // rotate into z=0 plane
+        // TODO
+    }
 }
 
 function init() {
