@@ -168,6 +168,8 @@ function make_zome() {
     var top_edge_length =  total_polar_height / ( kite_ratio_sum * cos_theta );
     ground_level = tip_Z - zome_height;
 
+    var add_overlaps = true;
+
     // add the top vert
     var zome_tip = p3( 0, 0, tip_Z );
     add_vert( zome_tip );
@@ -210,6 +212,7 @@ function make_zome() {
                         var bottom_height = dist( d, mid( a, c ) ) / world_scale;
                         pieces += "<li>"+N+" kites with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and bottom half height "+bottom_height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
                     }
+                    if(!add_overlaps) { planar_pieces.push( [a,b,c,d] ); }
                 }
                 if(Math.abs(d.z-ground_level) < 0.0001) {
                     // deal with case where this ring is exactly on the ground
@@ -234,6 +237,7 @@ function make_zome() {
                     var reduced_bottom_height = dist( mid( e, f ), mid( a, c ) ) / world_scale;
                     var shape = (K===1)?"diamonds":"kites";
                     pieces += "<li>"+N+" truncated "+shape+" with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and full bottom half height "+bottom_height.toFixed(0)+" mm reduced to "+reduced_bottom_height.toFixed(0)+" mm, leaving base of "+base.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
+                    if(!add_overlaps) { planar_pieces.push( [a,b,c,f,e] ); }
                 }
                 hit_ground = true;
                 triangles.push(ie);
@@ -265,6 +269,7 @@ function make_zome() {
                     var width = dist( a, c ) / world_scale;
                     var height = dist( b, mid( a, c ) ) / world_scale;
                     pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
+                    planar_pieces.push( [a,b,c] );
                 }
             }
         }
@@ -272,8 +277,6 @@ function make_zome() {
 
     pieces += "</ol>";
 
-    var add_overlaps = false;
-    planar_pieces = [];
     if(add_overlaps) {
         var base_center = p3( 0, 0, ground_level );
         var overlap_mm = 30;
@@ -298,7 +301,7 @@ function make_zome() {
                 var e = add( a, ae );
                 var f = add( d, df );
                 var g = add( c, cg );
-                // avoid intersection from vertex-neighbors
+                // avoid intersection from same-ring neighbors
                 var e2 = intersect_line_and_plane( e, sub(f,e), a, plane_normal(a, zome_tip, base_center) );
                 var g2 = intersect_line_and_plane( g, sub(f,g), c, plane_normal(c, zome_tip, base_center) );
                 var ie2 = add_vert( e2 );
@@ -311,7 +314,7 @@ function make_zome() {
                 }
             }
             else if( face.length == 5 ) {
-                // extend diamond/kite with overlap on lower edges
+                // extend truncated diamond/kite with overlap on lower edges
                 var ia = face[0];
                 var ib = face[1];
                 var ic = face[2];
@@ -326,11 +329,12 @@ function make_zome() {
                 var cj = mul( sub( c, b ), overlap / dist(c, b) );
                 var f = add( a, af );
                 var j = add( c, cj );
-                // avoid intersection from vertex-neighbors
+                // avoid intersection from same-ring neighbors
                 var f2 = intersect_line_and_plane( f, sub(e,a), a, plane_normal(a, zome_tip, base_center) );
                 var j2 = intersect_line_and_plane( j, sub(d,c), c, plane_normal(c, zome_tip, base_center) );
                 var if2 = add_vert( f2 );
                 var ij2 = add_vert( j2 );
+                // avoid intersection with ground place
                 var g = intersect_line_and_plane( f, sub(e,a), e, zaxis() );
                 var h = intersect_line_and_plane( j, sub(d,c), d, zaxis() );
                 var ig = add_vert( g );
@@ -343,7 +347,7 @@ function make_zome() {
             }
         }
     }
-    
+
     layout_planar_pieces();
 
     var widest_diameter = 0;
