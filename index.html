@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<title>Zomes</title>
 <meta charset="utf-8">
 
 <style>
@@ -49,10 +50,6 @@
 
 function p3( x, y, z ) { return { x:x, y:y, z:z }; }
 function p2( x, y ) { return { x:x, y:y, z:0 }; }
-function origin() { return p3(0,0,0); }
-function xaxis() { return p3(1,0,0); }
-function yaxis() { return p3(0,1,0); }
-function zaxis() { return p3(0,0,1); }
 function add( a, b ) { return p3( a.x + b.x, a.y + b.y, a.z + b.z ); }
 function sub( a, b ) { return p3( a.x - b.x, a.y - b.y, a.z - b.z ); }
 function mul( a, f ) { return p3( a.x * f, a.y * f, a.z * f ); }
@@ -60,7 +57,6 @@ function dot( a, b ) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 function len2( a ) { return dot( a, a ); }
 function len( a ) { return Math.sqrt( len2( a ) ); }
 function dist( a, b ) { return len( sub( a, b ) ); }
-function assign( a, b ) { a.x = b.x; a.y = b.y; a.z = b.z; }
 function normalize( a ) { return mul( a, 1 / len( a ) ); }
 function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, a.x * b.y - a.y * b.x ); }
 function mid( a, b ) { return mul( add( a, b ), 0.5 ); }
@@ -168,7 +164,7 @@ function make_zome() {
     var top_edge_length =  total_polar_height / ( kite_ratio_sum * cos_theta );
     ground_level = tip_Z - zome_height;
 
-    var add_overlaps = true;
+    var add_overlaps = false;
 
     // add the top vert
     var zome_tip = p3( 0, 0, tip_Z );
@@ -253,30 +249,6 @@ function make_zome() {
         }
     }
 
-    // add the bottom row of triangles as needed
-    if(triangles.length>0) {
-        for(var i=0;i<triangles.length;i+=3) {
-            var ia = triangles[(i+1)%triangles.length];
-            var ib = triangles[(i+2)%triangles.length];
-            var ic = triangles[(i+3)%triangles.length];
-            if( ia < verts.length && ib < verts.length && ic < verts.length ) {
-                make_face3( ia, ib, ic );
-                if(i==0) {
-                    var a = verts[ ia ];
-                    var b = verts[ ib ];
-                    var c = verts[ ic ];
-                    var top_angle = rad2deg( angle( a, b, c ) );
-                    var width = dist( a, c ) / world_scale;
-                    var height = dist( b, mid( a, c ) ) / world_scale;
-                    pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
-                    planar_pieces.push( [a,b,c] );
-                }
-            }
-        }
-    }
-
-    pieces += "</ol>";
-
     if(add_overlaps) {
         var base_center = p3( 0, 0, ground_level );
         var overlap_mm = 30;
@@ -335,8 +307,8 @@ function make_zome() {
                 var if2 = add_vert( f2 );
                 var ij2 = add_vert( j2 );
                 // avoid intersection with ground place
-                var g = intersect_line_and_plane( f, sub(e,a), e, zaxis() );
-                var h = intersect_line_and_plane( j, sub(d,c), d, zaxis() );
+                var g = intersect_line_and_plane( f, sub(e,a), e, p3(0,0,1) );
+                var h = intersect_line_and_plane( j, sub(d,c), d, p3(0,0,1) );
                 var ig = add_vert( g );
                 var ih = add_vert( h );
                 make_face4( if2, ia, ie, ig );
@@ -347,6 +319,30 @@ function make_zome() {
             }
         }
     }
+
+    // add the bottom row of triangles as needed
+    if(triangles.length>0) {
+        for(var i=0;i<triangles.length;i+=3) {
+            var ia = triangles[(i+1)%triangles.length];
+            var ib = triangles[(i+2)%triangles.length];
+            var ic = triangles[(i+3)%triangles.length];
+            if( ia < verts.length && ib < verts.length && ic < verts.length ) {
+                make_face3( ia, ib, ic );
+                if(i==0) {
+                    var a = verts[ ia ];
+                    var b = verts[ ib ];
+                    var c = verts[ ic ];
+                    var top_angle = rad2deg( angle( a, b, c ) );
+                    var width = dist( a, c ) / world_scale;
+                    var height = dist( b, mid( a, c ) ) / world_scale;
+                    pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
+                    planar_pieces.push( [a,b,c] );
+                }
+            }
+        }
+    }
+
+    pieces += "</ol>";
 
     layout_planar_pieces();
 
@@ -378,8 +374,14 @@ function layout_planar_pieces() {
                 console.log('Warning: non-planar piece:',d);
             }
         }
-        // rotate into z=0 plane
-        // TODO
+        // reconstruct in z=0
+        var origin = piece[1];
+        var px = normalize( sub( piece[0], origin ) );
+        var py = normalize( sub( sub( piece[2], origin ), mul( px, dot( sub( piece[2], origin ), px ) ) ) );
+        var top_angle = angle( piece[0], piece[1], piece[2] );
+        for( var iVert = 0; iVert < piece.length; iVert++) {
+            piece[iVert] = rot2d( p2( dot( sub( piece[iVert], origin ), px ), dot( sub( piece[iVert], origin ), py ) ), Math.PI/2-top_angle/2 );
+        }
     }
 }
 
@@ -591,11 +593,29 @@ function drawNet() {
     var canvas = document.getElementById('canvas2');
     var ctx = canvas.getContext('2d');
 
-    ctx.strokeStyle = "rgb(200,200,200)";
+    ctx.strokeStyle = "rgb(100,100,100)";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
-    // TODO
+    ctx.fillStyle = "rgba(200,210,255,0.2)";
+    ctx.beginPath();
+    var n = Math.ceil( Math.sqrt( planar_pieces.length ) );
+    var scale = 10;
+    var x_sep = canvas.width / n;
+    var y_sep = canvas.height / n;
+    for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++ ) {
+        var row = Math.floor( iPiece / n ) + 0.1;
+        var col = 0.5 + ( iPiece % n );
+        var offset = p2( col*x_sep, row*y_sep );
+        var piece = planar_pieces[ iPiece ];
+        ctx.moveTo( scale*piece[0].x+offset.x, scale*piece[0].y+offset.y );
+        for(var iVert = 1; iVert < piece.length; iVert++) {
+            ctx.lineTo( scale*piece[iVert].x+offset.x, scale*piece[iVert].y+offset.y );
+        }
+        ctx.lineTo( scale*piece[0].x+offset.x, scale*piece[0].y+offset.y );
+    }
+    ctx.stroke();
+    ctx.fill();
 }
 
 function animate() {
@@ -652,10 +672,10 @@ window.onload = init;
 </script>
 
 <noscript>
-<p>For full functionality of this site it is necessary to enable JavaScript.
+  <p>For full functionality of this site it is necessary to enable JavaScript.
 Here are the <a href="http://www.enable-javascript.com/" target="_blank">
-instructions how to enable JavaScript in your web browser</a>.
-</p></noscript>
+instructions how to enable JavaScript in your web browser</a>.</p>
+</noscript>
 
 </head>
 
