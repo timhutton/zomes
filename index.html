@@ -447,7 +447,7 @@ function init() {
     var theta_slider = document.getElementById("theta_slider");
     theta_slider.updatefromvalue = function() {
         theta = parseFloat(this.value);
-        document.getElementById("theta_label").innerHTML = "Angle of top strut to vertical: "+theta+" degrees";
+        document.getElementById("theta_label").innerHTML = "Angle of top struts to vertical: "+theta+" degrees";
     }
     theta_slider.oninput = function() {
         this.updatefromvalue();
@@ -643,9 +643,19 @@ function download(filename, type, text) {
     document.body.removeChild(element);
 }
 
+function getParamsDesc() {
+    var desc = "# Height = " + H.toFixed(1) + " mm\n";
+    desc += "# N = " + N.toFixed(0) + " (number of shapes in each ring)\n";
+    desc += "# theta = " + theta.toFixed(2) + " degrees (angle of top struts to vertical)\n";
+    desc += "# D = " + D.toFixed(4) + " (cut as proportion of pole-to-pole distance)\n";
+    desc += "# K = " + K.toFixed(5) + " (kite ratio, lower half to upper half)\n";
+    return desc;
+}
+
 function downloadOBJ() {
     var obj = "# OBJ produced by https://timhutton.github.io/zomes/\n";
     obj += "# Units: mm\n";
+    obj += getParamsDesc();
     for( var iVert = 0; iVert < verts.length; iVert++ ) {
         var v = mul( add( verts[ iVert ], p3( 0, 0, -ground_level ) ), 1 / world_scale );
         obj += "v " + v.x + " " + v.y + " " + v.z + "\n";
@@ -664,6 +674,7 @@ function downloadOBJ() {
 function downloadOBJ_2d() {
     var obj = "# OBJ produced by https://timhutton.github.io/zomes/\n";
     obj += "# Units: mm\n";
+    obj += getParamsDesc();
     var faces = "";
     var iGlobalVert = 1;
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
@@ -719,7 +730,7 @@ instructions how to enable JavaScript in your web browser</a>.</p>
       <div class="slidecontainer"><input type="range" min="100" max="10000" value="2000" step="5" class="slider" id="height_slider"></div>
       <p id="N_label">N:</p>
       <div class="slidecontainer"><input type="range" min="3" max="25" value="14" step="1" class="slider" id="N_slider"></div>
-      <p id="theta_label">Angle of top strut to vertical:</p>
+      <p id="theta_label">Angle of top struts to vertical:</p>
       <div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="0.1" class="slider" id="theta_slider"></div>
       <p>
         <div id="D_label" style="float:left">Cut proportion:</div>
