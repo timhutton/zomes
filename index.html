@@ -349,12 +349,12 @@ function make_zome() {
     var widest_diameter = 0;
     for(var iVert = 0; iVert < verts.length; iVert++) {
         var v = verts[ iVert ];
-        var diameter = dist( v, p3( 0, 0, v.z ) ) / world_scale;
+        var diameter = 2 * dist( v, p3( 0, 0, v.z ) ) / world_scale;
         if( diameter > widest_diameter ) {
             widest_diameter = diameter;
         }
     }
-    var base_diameter = dist( verts[verts.length-1], p3(0,0,ground_level) ) / world_scale;
+    var base_diameter = 2 * dist( verts[verts.length-1], p3(0,0,ground_level) ) / world_scale;
     var strut_length = dist( verts[0], verts[1] ) / world_scale;
     document.getElementById("base_diameter_label").innerHTML = "Base diameter: "+base_diameter.toFixed(0)+" mm";
     document.getElementById("widest_diameter_label").innerHTML = "Widest diameter: "+widest_diameter.toFixed(0)+" mm";
