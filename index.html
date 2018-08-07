@@ -336,7 +336,7 @@ function make_zome() {
                     var width = dist( a, c ) / world_scale;
                     var height = dist( b, mid( a, c ) ) / world_scale;
                     pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
-                    planar_pieces.push( [a,b,c] );
+                    planar_pieces.push( [ a, b, c ] );
                 }
             }
         }
@@ -364,6 +364,9 @@ function make_zome() {
 }
 
 function layout_planar_pieces() {
+    var grid_side = Math.ceil( Math.sqrt( planar_pieces.length ) );
+    var x_sep = 1000; // mm // TODO: use e.g. max size for both x and y
+    var y_sep = x_sep;
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
         var piece = planar_pieces[iPiece];
         // verify planarity
@@ -375,12 +378,19 @@ function layout_planar_pieces() {
             }
         }
         // reconstruct in z=0
-        var origin = piece[1];
+        var origin = piece[1]; // (the top of each diamond/kite)
         var px = normalize( sub( piece[0], origin ) );
         var py = normalize( sub( sub( piece[2], origin ), mul( px, dot( sub( piece[2], origin ), px ) ) ) );
         var top_angle = angle( piece[0], piece[1], piece[2] );
         for( var iVert = 0; iVert < piece.length; iVert++) {
             piece[iVert] = rot2d( p2( dot( sub( piece[iVert], origin ), px ), dot( sub( piece[iVert], origin ), py ) ), Math.PI/2-top_angle/2 );
+        }
+        // lay out in grid
+        var row = Math.floor( iPiece / grid_side );
+        var col = iPiece % grid_side;
+        var offset = p2( col*x_sep, row*y_sep );
+        for(var iVert = 0; iVert < piece.length; iVert++) {
+            piece[iVert] = p2( piece[iVert].x / world_scale + offset.x, piece[iVert].y / world_scale + offset.y );
         }
     }
 }
@@ -599,14 +609,9 @@ function drawNet() {
 
     ctx.fillStyle = "rgba(200,210,255,0.2)";
     ctx.beginPath();
-    var n = Math.ceil( Math.sqrt( planar_pieces.length ) );
-    var scale = 10;
-    var x_sep = canvas.width / n;
-    var y_sep = canvas.height / n;
+    var scale = 0.1; // from mm to pixels 
+    var offset = p2( 100, 100 ); // pixels
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++ ) {
-        var row = Math.floor( iPiece / n ) + 0.1;
-        var col = 0.5 + ( iPiece % n );
-        var offset = p2( col*x_sep, row*y_sep );
         var piece = planar_pieces[ iPiece ];
         ctx.moveTo( scale*piece[0].x+offset.x, scale*piece[0].y+offset.y );
         for(var iVert = 1; iVert < piece.length; iVert++) {
@@ -629,17 +634,18 @@ function animate() {
 }
 
 function download(filename, type, text) {
-  var element = document.createElement('a');
-  element.setAttribute('href', 'data:'+type+';charset=utf-8,' + encodeURIComponent(text));
-  element.setAttribute('download', filename);
-  element.style.display = 'none';
-  document.body.appendChild(element);
-  element.click();
-  document.body.removeChild(element);
+    var element = document.createElement('a');
+    element.setAttribute('href', 'data:'+type+';charset=utf-8,' + encodeURIComponent(text));
+    element.setAttribute('download', filename);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
 }
 
 function downloadOBJ() {
     var obj = "# OBJ produced by https://timhutton.github.io/zomes/\n";
+    obj += "# Units: mm\n";
     for( var iVert = 0; iVert < verts.length; iVert++ ) {
         var v = mul( add( verts[ iVert ], p3( 0, 0, -ground_level ) ), 1 / world_scale );
         obj += "v " + v.x + " " + v.y + " " + v.z + "\n";
@@ -653,6 +659,26 @@ function downloadOBJ() {
         obj += "\n";
     }
     download("zome.obj", "application/object", obj);
+}
+
+function downloadOBJ_2d() {
+    var obj = "# OBJ produced by https://timhutton.github.io/zomes/\n";
+    obj += "# Units: mm\n";
+    var faces = "";
+    var iGlobalVert = 1;
+    for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
+        var piece = planar_pieces[iPiece];
+        faces += "f";
+        for( var iVert = 0; iVert < piece.length; iVert++) {
+            var v = piece[iVert];
+            obj += "v " + v.x + " " + v.y + " " + v.z + "\n";
+            faces += " " + iGlobalVert;
+            iGlobalVert++;
+        }
+        faces += "\n";
+    }
+    obj += faces;
+    download("zome_pieces.obj", "application/object", obj);
 }
 
 function setToDiamond() {
@@ -719,6 +745,7 @@ instructions how to enable JavaScript in your web browser</a>.</p>
     </td>
     <td valign="top" align="left" style="padding: 0px 0px 0px 30px;">
       <p id="pieces_label">From top to bottom:</p>
+      <button onclick="downloadOBJ_2d();">Download 2D layout as OBJ</button>
     </td>
   </tr>
 </table>
