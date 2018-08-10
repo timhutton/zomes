@@ -194,6 +194,7 @@ function make_zome() {
             var c = verts[ ic ];
             var d = add(b,mul(sub(mid(a,c),b),1+K)); // make a kite (rhombus if K=1)
             var top_angle = rad2deg( angle( a, b, c ) );
+            var top_strut_length = dist( a, b ) / world_scale;
             if( d.z >= ground_level_with_tolerance ) {
                 var id = add_vert( d );
                 make_face4( ia, ib, ic, id );
@@ -201,12 +202,12 @@ function make_zome() {
                     var width = dist( a, c ) / world_scale;
                     if( K===1 ) {
                         var height = dist( b, d ) / world_scale;
-                        pieces += "<li>"+N+" diamonds with width "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. </li>";
+                        pieces += "<li>"+N+" diamonds with width "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. Strut length: "+top_strut_length.toFixed(1)+" mm. </li>";
                     }
                     else {
                         var top_height = dist( b, mid( a, c ) ) / world_scale;
                         var bottom_height = dist( d, mid( a, c ) ) / world_scale;
-                        pieces += "<li>"+N+" kites with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and bottom half height "+bottom_height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. </li>";
+                        pieces += "<li>"+N+" kites with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and bottom half height "+bottom_height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. Top strut length: "+top_strut_length.toFixed(1)+" mm. </li>";
                     }
                     if(!add_overlaps) { planar_pieces.push( [a,b,c,d] ); }
                 }
@@ -232,7 +233,7 @@ function make_zome() {
                     var bottom_height = dist( d, mid( a, c ) ) / world_scale;
                     var reduced_bottom_height = dist( mid( e, f ), mid( a, c ) ) / world_scale;
                     var shape = (K===1)?"diamonds":"kites";
-                    pieces += "<li>"+N+" truncated "+shape+" with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and full bottom half height "+bottom_height.toFixed(0)+" mm reduced to "+reduced_bottom_height.toFixed(0)+" mm, leaving base of "+base.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. </li>";
+                    pieces += "<li>"+N+" truncated "+shape+" with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and full bottom half height "+bottom_height.toFixed(0)+" mm reduced to "+reduced_bottom_height.toFixed(0)+" mm, leaving base of "+base.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. Top strut length: "+top_strut_length.toFixed(1)+" mm. </li>";
                     if(!add_overlaps) { planar_pieces.push( [a,b,c,f,e] ); }
                 }
                 hit_ground = true;
@@ -335,9 +336,10 @@ function make_zome() {
                     var b = verts[ ib ];
                     var c = verts[ ic ];
                     var top_angle = rad2deg( angle( a, b, c ) );
+                    var top_strut_length = dist( a, b ) / world_scale;
                     var width = dist( a, c ) / world_scale;
                     var height = dist( b, mid( a, c ) ) / world_scale;
-                    pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. </li>";
+                    pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. Top strut length: "+top_strut_length.toFixed(1)+" mm. </li>";
                     planar_pieces.push( [ a, b, c ] );
                 }
             }
@@ -392,7 +394,7 @@ function layout_planar_pieces() {
         var col = iPiece % grid_side;
         var offset = p2( col*x_sep, row*y_sep );
         for(var iVert = 0; iVert < piece.length; iVert++) {
-            piece[iVert] = p2( piece[iVert].x / world_scale + offset.x, piece[iVert].y / world_scale + offset.y );
+            piece[iVert] = p2( piece[iVert].x / world_scale + offset.x, -( piece[iVert].y / world_scale + offset.y ) );
         }
     }
 }
@@ -615,11 +617,11 @@ function drawNet() {
     var offset = p2( 100, 100 ); // pixels
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++ ) {
         var piece = planar_pieces[ iPiece ];
-        ctx.moveTo( scale*piece[0].x+offset.x, scale*piece[0].y+offset.y );
+        ctx.moveTo( scale*piece[0].x+offset.x, offset.y - scale*piece[0].y );
         for(var iVert = 1; iVert < piece.length; iVert++) {
-            ctx.lineTo( scale*piece[iVert].x+offset.x, scale*piece[iVert].y+offset.y );
+            ctx.lineTo( scale*piece[iVert].x+offset.x, offset.y - scale*piece[iVert].y );
         }
-        ctx.lineTo( scale*piece[0].x+offset.x, scale*piece[0].y+offset.y );
+        ctx.lineTo( scale*piece[0].x+offset.x, offset.y - scale*piece[0].y );
     }
     ctx.stroke();
     ctx.fill();
