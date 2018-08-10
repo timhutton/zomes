@@ -150,7 +150,7 @@ function make_zome() {
 
     // TODO: if K is vertical coord of 4th point, add new parameter to control its horizontal position
 
-    pieces = "From top to bottom:<ol>";
+    pieces = "From top to bottom: <ol>";
 
     world_scale = scale * 0.001;
 
@@ -201,12 +201,12 @@ function make_zome() {
                     var width = dist( a, c ) / world_scale;
                     if( K===1 ) {
                         var height = dist( b, d ) / world_scale;
-                        pieces += "<li>"+N+" diamonds with width "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
+                        pieces += "<li>"+N+" diamonds with width "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. </li>";
                     }
                     else {
                         var top_height = dist( b, mid( a, c ) ) / world_scale;
                         var bottom_height = dist( d, mid( a, c ) ) / world_scale;
-                        pieces += "<li>"+N+" kites with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and bottom half height "+bottom_height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
+                        pieces += "<li>"+N+" kites with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and bottom half height "+bottom_height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. </li>";
                     }
                     if(!add_overlaps) { planar_pieces.push( [a,b,c,d] ); }
                 }
@@ -232,7 +232,7 @@ function make_zome() {
                     var bottom_height = dist( d, mid( a, c ) ) / world_scale;
                     var reduced_bottom_height = dist( mid( e, f ), mid( a, c ) ) / world_scale;
                     var shape = (K===1)?"diamonds":"kites";
-                    pieces += "<li>"+N+" truncated "+shape+" with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and full bottom half height "+bottom_height.toFixed(0)+" mm reduced to "+reduced_bottom_height.toFixed(0)+" mm, leaving base of "+base.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
+                    pieces += "<li>"+N+" truncated "+shape+" with width "+width.toFixed(0)+" mm and top half height "+top_height.toFixed(0)+" mm and full bottom half height "+bottom_height.toFixed(0)+" mm reduced to "+reduced_bottom_height.toFixed(0)+" mm, leaving base of "+base.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. </li>";
                     if(!add_overlaps) { planar_pieces.push( [a,b,c,f,e] ); }
                 }
                 hit_ground = true;
@@ -267,8 +267,9 @@ function make_zome() {
                 var b = verts[ ib ];
                 var c = verts[ ic ];
                 var d = verts[ id ];
-                var ae = mul( sub( a, b ), overlap / dist( a, b ) );
-                var cg = mul( sub( c, b ), overlap / dist( c, b ) );
+                var extension_length = overlap / Math.cos( angle( d, a, b ) - Math.PI/2 ); // (assume angles same on each side)
+                var ae = mul( sub( a, b ), extension_length / dist( a, b ) );
+                var cg = mul( sub( c, b ), extension_length / dist( c, b ) );
                 var df = add( ae, cg );
                 var e = add( a, ae );
                 var f = add( d, df );
@@ -297,8 +298,9 @@ function make_zome() {
                 var c = verts[ ic ];
                 var d = verts[ id ];
                 var e = verts[ ie ];
-                var af = mul( sub( a, b ), overlap / dist(a, b) );
-                var cj = mul( sub( c, b ), overlap / dist(c, b) );
+                var extension_length = overlap / Math.cos( angle( e, a, b ) - Math.PI/2 ); // (assume angles same on each side)
+                var af = mul( sub( a, b ), extension_length / dist(a, b) );
+                var cj = mul( sub( c, b ), extension_length / dist(c, b) );
                 var f = add( a, af );
                 var j = add( c, cj );
                 // avoid intersection from same-ring neighbors
@@ -335,7 +337,7 @@ function make_zome() {
                     var top_angle = rad2deg( angle( a, b, c ) );
                     var width = dist( a, c ) / world_scale;
                     var height = dist( b, mid( a, c ) ) / world_scale;
-                    pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees.</li>";
+                    pieces += "<li>"+N+" isosceles triangles with base "+width.toFixed(0)+" mm and height "+height.toFixed(0)+" mm. Top angle: " + top_angle.toFixed(0)+" degrees. </li>";
                     planar_pieces.push( [ a, b, c ] );
                 }
             }
@@ -649,6 +651,7 @@ function getParamsDesc() {
     desc += "# theta = " + theta.toFixed(2) + " degrees (angle of top struts to vertical)\n";
     desc += "# D = " + D.toFixed(4) + " (cut as proportion of pole-to-pole distance)\n";
     desc += "# K = " + K.toFixed(5) + " (kite ratio, lower half to upper half)\n";
+    desc += "# " + document.getElementById("pieces_label").textContent + "\n";
     return desc;
 }
 
@@ -725,25 +728,25 @@ instructions how to enable JavaScript in your web browser</a>.</p>
     </td>
     <td width="300px" valign="top" align="left" style="padding: 0px 0px 0px 30px;">
       <p id="scale_label">Render scale:</p>
-      <div class="slidecontainer"><input type="range" min="0.5" max="200" value="10" step="0.01" class="slider" id="scale_slider"></div>
+      <div class="slidecontainer"><input type="range" min="0.5" max="200" value="7" step="0.01" class="slider" id="scale_slider"></div>
       <p id="height_label">Height:</p>
-      <div class="slidecontainer"><input type="range" min="100" max="10000" value="2000" step="5" class="slider" id="height_slider"></div>
+      <div class="slidecontainer"><input type="range" min="100" max="10000" value="1965" step="5" class="slider" id="height_slider"></div>
       <p id="N_label">N:</p>
-      <div class="slidecontainer"><input type="range" min="3" max="25" value="14" step="1" class="slider" id="N_slider"></div>
+      <div class="slidecontainer"><input type="range" min="3" max="25" value="18" step="1" class="slider" id="N_slider"></div>
       <p id="theta_label">Angle of top struts to vertical:</p>
-      <div class="slidecontainer"><input type="range" min="15" max="80" value="50" step="0.1" class="slider" id="theta_slider"></div>
+      <div class="slidecontainer"><input type="range" min="15" max="80" value="58.6" step="0.1" class="slider" id="theta_slider"></div>
       <p>
         <div id="D_label" style="float:left">Cut proportion:</div>
         <button style="float:right" onclick="snapCutToNearest();" id="snap_cut_button">Snap to nearest</button>
         <div style="clear: both;"></div>
       </p>
-      <div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.6" step="any" class="slider" id="D_slider"></div>
+      <div class="slidecontainer"><input type="range" min="0.1" max="1" value="0.5252" step="any" class="slider" id="D_slider"></div>
       <p>
         <div id="kite_label" style="float:left">Kite ratio:</div>
         <button style="float:right" onclick="setToDiamond();" id="diamond_button">Set to diamond</button>
         <div style="clear: both;"></div>
       </p>
-      <div class="slidecontainer"><input type="range" min="0.8" max="1.2" value="1" step="0.001" class="slider" id="kite_slider"></div>
+      <div class="slidecontainer"><input type="range" min="0.8" max="1.2" value="1.033" step="0.001" class="slider" id="kite_slider"></div>
       <p id="base_diameter_label">Base diameter:</p>
       <p id="widest_diameter_label">Widest diameter:</p>
       <p id="strut_length_label">Strut length:</p>
