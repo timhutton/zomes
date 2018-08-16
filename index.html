@@ -697,6 +697,45 @@ function downloadOBJ_2d() {
     download("zome_2D_pieces.obj", "application/object", obj);
 }
 
+function downloadSVG_2d() {
+    var svg = "<!-- SVG produced by https://timhutton.github.io/zomes/ \n";
+    svg += "     Units: mm\n";
+    svg += getParamsDesc() + " --\>\n";
+    var bounds = { minX: Number.MAX_VALUE, minY: Number.MAX_VALUE, maxX: -Number.MAX_VALUE, maxY: -Number.MAX_VALUE };
+    for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
+        var piece = planar_pieces[iPiece];
+        for( var iVert = 0; iVert < piece.length; iVert++) {
+            var v = piece[iVert];
+            var x = v.x;
+            var y = v.y*-1;
+            if( x < bounds.minX) { bounds.minX = x; }
+            if( y < bounds.minY) { bounds.minY = y; }
+            if( x > bounds.maxX) { bounds.maxX = x; }
+            if( y > bounds.maxY) { bounds.maxY = y; }
+        }
+    }
+    svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' viewBox='"
+        + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + (bounds.maxX-bounds.minX).toFixed(1) + " " + (bounds.maxY-bounds.minY).toFixed(1) + "'>\n";
+    svg += "  <g stroke='black' stroke-width='1' fill='none'>\n";
+    for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
+        var piece = planar_pieces[iPiece];
+        svg += "    <path d='M ";
+        for( var iVert = 0; iVert < piece.length; iVert++) {
+            var v = piece[iVert];
+            var x = v.x;
+            var y = v.y*-1;
+            svg += x + " " + y + " ";
+            if(iVert < piece.length-1) {
+                svg += "L ";
+            }
+        }
+        svg += "Z' />\n";
+    }
+    svg += "  </g>\n";
+    svg += "</svg>\n";
+    download("zome_pieces.svg", "image/svg+xml", svg);
+}
+
 function setToDiamond() {
     var kite_slider = document.getElementById("kite_slider");
     kite_slider.value = 1;
@@ -762,6 +801,7 @@ instructions how to enable JavaScript in your web browser</a>.</p>
     <td valign="top" align="left" style="padding: 0px 0px 0px 30px;">
       <p id="pieces_label">From top to bottom:</p>
       <button onclick="downloadOBJ_2d();">Download 2D layout as OBJ</button>
+      <button onclick="downloadSVG_2d();">Download 2D layout as SVG</button>
     </td>
   </tr>
 </table>
