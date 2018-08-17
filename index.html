@@ -46,6 +46,9 @@
 }
 </style>
 
+<!-- jsPDF for PDF output: https://github.com/MrRio/jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.1/jspdf.min.js"></script>
+
 <script>
 
 function p3( x, y, z ) { return { x:x, y:y, z:z }; }
@@ -768,6 +771,32 @@ function downloadSVG_2d() {
     download("zome_2D_pieces.svg", "image/svg+xml", svg);
 }
 
+function downloadPDF_2d() {
+    // fit to A4
+    // TODO: support other page sizes
+    // TODO: work out how to print at correct size
+    var page_width = 297;
+    var page_height = 210;
+    var margin = 10;
+    var doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: [page_width, page_height]
+    })
+    var bounds = getBounds(planar_pieces);
+    var scale = Math.min( (page_width-margin*2) / bounds.width, (page_height-margin*2) / bounds.height );
+    for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
+        var piece = planar_pieces[iPiece];
+        for( var iVert = 0; iVert < piece.length; iVert++) {
+            var v = piece[iVert];
+            var v2 = piece[(iVert+1)%piece.length];
+            doc.line( (v.x-bounds.minX)*scale + margin, (-v.y-bounds.minY)*scale + margin,
+                      (v2.x-bounds.minX)*scale + margin, (-v2.y-bounds.minY)*scale + margin );
+        }
+    }
+    doc.save('zome_2D_pieces.pdf')
+}
+
 function setToDiamond() {
     var kite_slider = document.getElementById("kite_slider");
     kite_slider.value = 1;
@@ -834,6 +863,7 @@ instructions how to enable JavaScript in your web browser</a>.</p>
       <p id="pieces_label">From top to bottom:</p>
       <button onclick="downloadOBJ_2d();">Download 2D layout as OBJ</button>
       <button onclick="downloadSVG_2d();">Download 2D layout as SVG</button>
+      <button onclick="downloadPDF_2d();">Download 2D layout as PDF</button>
     </td>
   </tr>
 </table>
