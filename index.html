@@ -369,8 +369,6 @@ function make_zome() {
 
 function layout_planar_pieces() {
     var grid_side = Math.ceil( Math.sqrt( planar_pieces.length ) );
-    var x_sep = 1000; // mm // TODO: use e.g. max size for both x and y
-    var y_sep = x_sep;
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
         var piece = planar_pieces[iPiece];
         // verify planarity
@@ -389,6 +387,31 @@ function layout_planar_pieces() {
         for( var iVert = 0; iVert < piece.length; iVert++) {
             piece[iVert] = rot2d( p2( dot( sub( piece[iVert], origin ), px ), dot( sub( piece[iVert], origin ), py ) ), Math.PI/2-top_angle/2 );
         }
+    }
+    // compute the max width and height of the 2D pieces, in mm
+    var max_width = -Number.MAX_VALUE;
+    var max_height = -Number.MAX_VALUE;
+    for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
+        var piece = planar_pieces[iPiece];
+        var bounds = { minX: Number.MAX_VALUE, minY: Number.MAX_VALUE, maxX: -Number.MAX_VALUE, maxY: -Number.MAX_VALUE };
+        for( var iVert = 0; iVert < piece.length; iVert++) {
+            var v = piece[iVert];
+            var x = v.x;
+            var y = v.y;
+            if( x < bounds.minX) { bounds.minX = x; }
+            if( y < bounds.minY) { bounds.minY = y; }
+            if( x > bounds.maxX) { bounds.maxX = x; }
+            if( y > bounds.maxY) { bounds.maxY = y; }
+        }
+        bounds.width = bounds.maxX - bounds.minX;
+        bounds.height = bounds.maxY - bounds.minY;
+        if( bounds.width > max_width ) { max_width = bounds.width; }
+        if( bounds.height > max_height ) { max_height = bounds.height; }
+    }
+    var x_sep = 1.05 * max_width / world_scale;
+    var y_sep = 1.05 * max_height / world_scale;
+    for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
+        var piece = planar_pieces[iPiece];
         // lay out in grid
         var row = Math.floor( iPiece / grid_side );
         var col = iPiece % grid_side;
@@ -611,10 +634,12 @@ function drawNet() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
+    var bounds = getBounds(planar_pieces);
+
     ctx.fillStyle = "rgba(200,210,255,0.2)";
     ctx.beginPath();
-    var scale = 0.1; // from mm to pixels 
-    var offset = p2( 100, 100 ); // pixels
+    var scale = 0.9 * Math.min( canvas.width / bounds.width, canvas.height / bounds.height );
+    var offset = p2( -bounds.minX * scale + bounds.width*0.05*scale, -bounds.minY * scale + bounds.height*0.05*scale );
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++ ) {
         var piece = planar_pieces[ iPiece ];
         ctx.moveTo( scale*piece[0].x+offset.x, offset.y - scale*piece[0].y );
@@ -697,10 +722,7 @@ function downloadOBJ_2d() {
     download("zome_2D_pieces.obj", "application/object", obj);
 }
 
-function downloadSVG_2d() {
-    var svg = "<!-- SVG produced by https://timhutton.github.io/zomes/ \n";
-    svg += "     Units: mm\n";
-    svg += getParamsDesc() + " --\>\n";
+function getBounds(planar_pieces) {
     var bounds = { minX: Number.MAX_VALUE, minY: Number.MAX_VALUE, maxX: -Number.MAX_VALUE, maxY: -Number.MAX_VALUE };
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
         var piece = planar_pieces[iPiece];
@@ -714,10 +736,18 @@ function downloadSVG_2d() {
             if( y > bounds.maxY) { bounds.maxY = y; }
         }
     }
-    var width = bounds.maxX-bounds.minX;
-    var height = bounds.maxY-bounds.minY;
-    svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='"+width.toFixed(1)+"mm' height='"+height.toFixed(1)+"mm' viewBox='"
-        + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + width.toFixed(1) + " " + height.toFixed(1) + "'>\n";
+    bounds.width = bounds.maxX - bounds.minX;
+    bounds.height = bounds.maxY - bounds.minY;
+    return bounds;
+}
+
+function downloadSVG_2d() {
+    var svg = "<!-- SVG produced by https://timhutton.github.io/zomes/ \n";
+    svg += "     Units: mm\n";
+    svg += getParamsDesc() + " --\>\n";
+    var bounds = getBounds(planar_pieces);
+    svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='"+bounds.width.toFixed(1)+"mm' height='"+bounds.height.toFixed(1)+"mm' viewBox='"
+        + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + bounds.width.toFixed(1) + " " + bounds.height.toFixed(1) + "'>\n";
     svg += "  <g stroke='black' stroke-width='1' fill='none'>\n";
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
         var piece = planar_pieces[iPiece];
