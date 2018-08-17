@@ -714,8 +714,10 @@ function downloadSVG_2d() {
             if( y > bounds.maxY) { bounds.maxY = y; }
         }
     }
-    svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' viewBox='"
-        + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + (bounds.maxX-bounds.minX).toFixed(1) + " " + (bounds.maxY-bounds.minY).toFixed(1) + "'>\n";
+    var width = bounds.maxX-bounds.minX;
+    var height = bounds.maxY-bounds.minY;
+    svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='"+width.toFixed(1)+"mm' height='"+height.toFixed(1)+"mm' viewBox='"
+        + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + width.toFixed(1) + " " + height.toFixed(1) + "'>\n";
     svg += "  <g stroke='black' stroke-width='1' fill='none'>\n";
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
         var piece = planar_pieces[iPiece];
