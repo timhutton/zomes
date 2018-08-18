@@ -420,7 +420,7 @@ function layout_planar_pieces() {
         var col = iPiece % grid_side;
         var offset = p2( col*x_sep, row*y_sep );
         for(var iVert = 0; iVert < piece.length; iVert++) {
-            piece[iVert] = p2( piece[iVert].x / world_scale + offset.x, -( piece[iVert].y / world_scale + offset.y ) );
+            piece[iVert] = p2( piece[iVert].x / world_scale + offset.x, piece[iVert].y / world_scale + offset.y );
         }
     }
 }
@@ -645,11 +645,11 @@ function drawNet() {
     var offset = p2( -bounds.minX * scale + bounds.width*0.05*scale, -bounds.minY * scale + bounds.height*0.05*scale );
     for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++ ) {
         var piece = planar_pieces[ iPiece ];
-        ctx.moveTo( scale*piece[0].x+offset.x, offset.y - scale*piece[0].y );
+        ctx.moveTo( scale*piece[0].x+offset.x, scale*piece[0].y+offset.y );
         for(var iVert = 1; iVert < piece.length; iVert++) {
-            ctx.lineTo( scale*piece[iVert].x+offset.x, offset.y - scale*piece[iVert].y );
+            ctx.lineTo( scale*piece[iVert].x+offset.x, scale*piece[iVert].y+offset.y );
         }
-        ctx.lineTo( scale*piece[0].x+offset.x, offset.y - scale*piece[0].y );
+        ctx.lineTo( scale*piece[0].x+offset.x, scale*piece[0].y+offset.y );
     }
     ctx.stroke();
     ctx.fill();
@@ -715,7 +715,7 @@ function downloadOBJ_2d() {
         faces += "f";
         for( var iVert = 0; iVert < piece.length; iVert++) {
             var v = piece[iVert];
-            obj += "v " + v.x + " " + v.y + " " + v.z + "\n";
+            obj += "v " + v.x + " " + -v.y + " " + v.z + "\n";
             faces += " " + iGlobalVert;
             iGlobalVert++;
         }
@@ -731,12 +731,10 @@ function getBounds(planar_pieces) {
         var piece = planar_pieces[iPiece];
         for( var iVert = 0; iVert < piece.length; iVert++) {
             var v = piece[iVert];
-            var x = v.x;
-            var y = v.y*-1;
-            if( x < bounds.minX) { bounds.minX = x; }
-            if( y < bounds.minY) { bounds.minY = y; }
-            if( x > bounds.maxX) { bounds.maxX = x; }
-            if( y > bounds.maxY) { bounds.maxY = y; }
+            if( v.x < bounds.minX) { bounds.minX = v.x; }
+            if( v.y < bounds.minY) { bounds.minY = v.y; }
+            if( v.x > bounds.maxX) { bounds.maxX = v.x; }
+            if( v.y > bounds.maxY) { bounds.maxY = v.y; }
         }
     }
     bounds.width = bounds.maxX - bounds.minX;
@@ -757,9 +755,7 @@ function downloadSVG_2d() {
         svg += "    <path d='M ";
         for( var iVert = 0; iVert < piece.length; iVert++) {
             var v = piece[iVert];
-            var x = v.x;
-            var y = v.y*-1;
-            svg += x + " " + y + " ";
+            svg += v.x + " " + v.y + " ";
             if(iVert < piece.length-1) {
                 svg += "L ";
             }
@@ -772,26 +768,58 @@ function downloadSVG_2d() {
 }
 
 function downloadPDF_2d() {
-    // fit to A4
-    // TODO: support other page sizes
-    // TODO: work out how to print at correct size
-    var page_width = 297;
-    var page_height = 210;
-    var margin = 10;
+    // TODO: allow user to choose page size
+    var supported_page_sizes = [ {name:'A4 landscape', width:297, height:210, orientation:'landscape' } ]; 
+    var i_page_size = 0;
+    var margin = { left:10, right:10, top:10, bottom:10 };
+    var fit_to_one_page = false;
+    var page = supported_page_sizes[i_page_size];
+    var drawable = { width:page.width-margin.left-margin.right, height:page.height-margin.top-margin.bottom };
     var doc = new jsPDF({
-      orientation: 'landscape',
+      orientation: page.orientation,
       unit: 'mm',
-      format: [page_width, page_height]
+      format: [page.width, page.height]
     })
     var bounds = getBounds(planar_pieces);
-    var scale = Math.min( (page_width-margin*2) / bounds.width, (page_height-margin*2) / bounds.height );
-    for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
-        var piece = planar_pieces[iPiece];
-        for( var iVert = 0; iVert < piece.length; iVert++) {
-            var v = piece[iVert];
-            var v2 = piece[(iVert+1)%piece.length];
-            doc.line( (v.x-bounds.minX)*scale + margin, (-v.y-bounds.minY)*scale + margin,
-                      (v2.x-bounds.minX)*scale + margin, (-v2.y-bounds.minY)*scale + margin );
+    if( fit_to_one_page ) {
+        var scale = Math.min( drawable.width / bounds.width, drawable.height / bounds.height );
+        for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
+            var piece = planar_pieces[iPiece];
+            for( var iVert = 0; iVert < piece.length; iVert++) {
+                var v = piece[iVert];
+                var v2 = piece[(iVert+1)%piece.length];
+                doc.line( (v.x-bounds.minX)*scale + margin.left, (v.y-bounds.minY)*scale + margin.top,
+                          (v2.x-bounds.minX)*scale + margin.left, (v2.y-bounds.minY)*scale + margin.top );
+            }
+        }
+    }
+    else {
+        // keep the actual size, split the drawing over as many pages as needed, no overlap
+        var x_pages = Math.ceil( bounds.width / drawable.width );
+        var y_pages = Math.ceil( bounds.height / drawable.height );
+        for( var y = 0; y < y_pages; y++) {
+            for( var x = 0; x < x_pages; x++ ) {
+                // show which bit to cut
+                doc.setLineWidth(0.01);
+                doc.rect(margin.left,margin.top,drawable.width,drawable.height);
+                // draw the lines (only those within the page will appear)
+                doc.setLineWidth(0.5);
+                doc.text('Row '+(y+1).toFixed(0)+' Column '+(x+1).toFixed(0),margin.left+5, margin.top+10);
+                var left = bounds.minX + drawable.width * x;
+                var top = bounds.minY + drawable.height * y;
+                for( var iPiece = 0; iPiece < planar_pieces.length; iPiece++) {
+                    var piece = planar_pieces[iPiece];
+                    for( var iVert = 0; iVert < piece.length; iVert++) {
+                        var v = piece[iVert];
+                        var v2 = piece[(iVert+1)%piece.length];
+                        doc.line( margin.left + v.x - left, margin.top + v.y - top,
+                                  margin.left + v2.x - left, margin.top + v2.y - top );
+                    }
+                }
+                if( x < x_pages-1 || y < y_pages-1 ) {
+                    doc.addPage();
+                }
+            }
         }
     }
     doc.save('zome_2D_pieces.pdf')
