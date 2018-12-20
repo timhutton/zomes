@@ -12,9 +12,8 @@ The beauty of zomes is that their shape comes completely from the properties of 
 
 For large scale construction, take the measurements and cut out the pieces. Here's one we made out of cardboard:
 
-<img width="300px" src="https://user-images.githubusercontent.com/647092/50292780-e1548280-0469-11e9-8940-c5c0017e5a53.jpg">
-<img width="300px" src="https://user-images.githubusercontent.com/647092/50292782-e285af80-0469-11e9-9030-c90187d6b67c.jpg">
-<img width="300px" src="https://user-images.githubusercontent.com/647092/50292783-e3b6dc80-0469-11e9-8fbc-985195ee5ab2.jpg">
+<img width="250px" src="https://user-images.githubusercontent.com/647092/50292783-e3b6dc80-0469-11e9-8fbc-985195ee5ab2.jpg"> <img width="250px" src="https://user-images.githubusercontent.com/647092/50292780-e1548280-0469-11e9-8940-c5c0017e5a53.jpg"> <img width="250px" src="https://user-images.githubusercontent.com/647092/50292782-e285af80-0469-11e9-9030-c90187d6b67c.jpg">
+
 
 ## Papercraft model ##
 
