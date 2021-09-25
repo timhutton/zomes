@@ -6,7 +6,7 @@
 <br>
 Click here.</a>
 
-The beauty of zomes is that their shape comes completely from the properties of rhombi - only the bottom row of triangles is chosen by the user.
+The beauty of zomes is that their shape comes from the properties of rhombi - only a few parameters are chosen by the user.
 
 ## Make your own Zome ##
 
