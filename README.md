@@ -20,6 +20,8 @@ And a larger one made from fluted polypropylene and sticky velcro dots:
 
 ![image](https://user-images.githubusercontent.com/647092/134781897-bb1dc315-0ccf-420e-80f8-10532a408a04.png)
 
+More pictures: https://twitter.com/_tim_hutton_/status/1441738252973658112
+
 ## Papercraft model ##
 
 For smaller scale models you can print out copies of the curved strip, and cut them out:
