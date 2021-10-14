@@ -1,4 +1,4 @@
-# [Zomes](https://simplydifferently.org/Zome) are zonohedron domes, made from rhombi. #
+# [Zomes](https://simplydifferently.org/Zome) are [polar zonohedron](https://mathworld.wolfram.com/PolarZonohedron.html) domes, made from rhombi. #
 
 <a href="https://timhutton.github.io/zomes/">Interactive 3D tool:
 <br>
